@@ -613,7 +613,10 @@ export const OutboxEventScalarFieldEnum = {
   eventType: 'eventType',
   payload: 'payload',
   occurredAt: 'occurredAt',
-  processedAt: 'processedAt'
+  processedAt: 'processedAt',
+  retryCount: 'retryCount',
+  lastError: 'lastError',
+  lastErrorAt: 'lastErrorAt'
 } as const
 
 export type OutboxEventScalarFieldEnum = (typeof OutboxEventScalarFieldEnum)[keyof typeof OutboxEventScalarFieldEnum]

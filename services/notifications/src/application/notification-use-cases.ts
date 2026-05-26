@@ -11,6 +11,19 @@ export interface EmailPort {
   send(input: { to: string; subject: string; body: string }): Promise<void>;
 }
 
+/**
+ * Envía un email transaccional sin requerir contexto de tenant.
+ * Usado por servicios internos (identity, etc.) para emails del sistema:
+ * verificación de email, reset de contraseña, etc.
+ */
+export class SendTransactionalEmail {
+  constructor(private readonly email: EmailPort) {}
+
+  async execute(input: { to: string; subject: string; body: string }): Promise<void> {
+    await this.email.send(input);
+  }
+}
+
 export class CreateNotification {
   constructor(private readonly notifications: NotificationRepository) {}
 

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { parseEntityId, parseIdempotencyKey, parseTenantId, parseUserId } from "@totem/shared-kernel";
+import { ForbiddenError, parseEntityId, parseIdempotencyKey, parseTenantId, parseUserId } from "@totem/shared-kernel";
 import type { Route } from "@totem/service-runtime";
-import { CreateNotification, DispatchEmailNotification, type EmailPort, type NotificationRepository } from "../../application/notification-use-cases.js";
+import { CreateNotification, DispatchEmailNotification, SendTransactionalEmail, type EmailPort, type NotificationRepository } from "../../application/notification-use-cases.js";
 import type { Notification, NotificationChannel } from "../../domain/notification.js";
 
 function record(value: unknown): Record<string, unknown> {
@@ -19,21 +19,63 @@ function channel(value: unknown): NotificationChannel {
   return value === "email" ? "email" : "in_app";
 }
 
+/**
+ * Envía emails via Resend API.
+ * Usado en producción cuando RESEND_API_KEY está configurada.
+ */
 class ResendEmailPort implements EmailPort {
   async send(input: { to: string; subject: string; body: string }): Promise<void> {
-    if (process.env.RESEND_API_KEY === undefined) throw new Error("RESEND_API_KEY is required.");
+    const apiKey = process.env.RESEND_API_KEY;
+    if (typeof apiKey !== "string" || apiKey.length === 0) {
+      throw new Error("RESEND_API_KEY is required for email delivery.");
+    }
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: { authorization: `Bearer ${process.env.RESEND_API_KEY}`, "content-type": "application/json" },
-      body: JSON.stringify({ from: process.env.DEFAULT_FROM_EMAIL ?? "noreply@totemhub.com", to: input.to, subject: input.subject, text: input.body })
+      headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        from: process.env.DEFAULT_FROM_EMAIL ?? "noreply@totemhub.com",
+        to: input.to,
+        subject: input.subject,
+        text: input.body
+      })
     });
-    if (!response.ok) throw new Error("Email delivery failed.");
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "unknown");
+      throw new Error(`Email delivery failed (${response.status}): ${errorText}`);
+    }
   }
 }
 
+/**
+ * Imprime emails en consola en lugar de enviarlos.
+ * Fallback para desarrollo local sin RESEND_API_KEY configurada.
+ */
+class ConsoleEmailPort implements EmailPort {
+  async send(input: { to: string; subject: string; body: string }): Promise<void> {
+    // En desarrollo local los emails se loguean en lugar de enviarse
+    const divider = "─".repeat(60);
+    console.log(`\n📧 [DEV EMAIL] ${divider}`);
+    console.log(`  To:      ${input.to}`);
+    console.log(`  Subject: ${input.subject}`);
+    console.log(`  Body:\n${input.body.split("\n").map((l) => `    ${l}`).join("\n")}`);
+    console.log(`${divider}\n`);
+  }
+}
+
+/** Elige el puerto de email según la configuración disponible. */
+function createEmailPort(): EmailPort {
+  if (typeof process.env.RESEND_API_KEY === "string" && process.env.RESEND_API_KEY.length > 0) {
+    return new ResendEmailPort();
+  }
+  return new ConsoleEmailPort();
+}
+
 export function createNotificationBusinessRoutes(repository: NotificationRepository): readonly Route[] {
+  const emailPort = createEmailPort();
   const createNotification = new CreateNotification(repository);
-  const dispatchEmail = new DispatchEmailNotification(repository, new ResendEmailPort());
+  const dispatchEmail = new DispatchEmailNotification(repository, emailPort);
+  const sendTransactional = new SendTransactionalEmail(emailPort);
+
   return [
     {
       method: "POST",
@@ -55,19 +97,44 @@ export function createNotificationBusinessRoutes(repository: NotificationReposit
         return createNotification.execute(notification, key, request.context);
       }
     },
+
+    // ── POST /notifications/send-email ───────────────────────────────────────
+    // Soporta dos flujos:
+    //
+    //   1. Sistema interno (role === "system") — sin tenant:
+    //      Llamado por identity para emails de verificación, reset, etc.
+    //      No necesita tenantId. Envía el email de forma fire-and-forget.
+    //
+    //   2. Tenant autenticado — con tenant:
+    //      Persiste la notificación en la BD y la despacha.
+    //      Requiere tenantId en el contexto o en el body.
     {
       method: "POST",
       path: "/notifications/send-email",
       handler: async (request) => {
         const body = record(request.body);
+        const recipientEmail = text(body, "recipientEmail");
+        const subject = text(body, "subject");
+        const emailBody = text(body, "body");
+
+        // ── Flujo 1: llamada interna del sistema (sin tenant) ────────────────
+        if (request.context.role === "system") {
+          await sendTransactional.execute({ to: recipientEmail, subject, body: emailBody });
+          return { sent: true, message: "Email sent successfully." };
+        }
+
+        // ── Flujo 2: llamada de tenant autenticado (persiste en BD) ──────────
+        if (request.context.tenantId === null && typeof body.tenantId !== "string") {
+          throw new ForbiddenError("tenantId is required for non-system email dispatch.");
+        }
         const notification: Notification = {
           id: typeof body.id === "string" ? parseEntityId(body.id) : parseEntityId(randomUUID()),
           tenantId: request.context.tenantId ?? parseTenantId(text(body, "tenantId")),
           recipientUserId: null,
-          recipientEmail: text(body, "recipientEmail"),
+          recipientEmail,
           channel: "email",
-          subject: text(body, "subject"),
-          body: text(body, "body"),
+          subject,
+          body: emailBody,
           status: "pendiente",
           metadata: record(body.metadata ?? {})
         };
