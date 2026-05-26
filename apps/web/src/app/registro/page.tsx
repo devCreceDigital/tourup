@@ -6,25 +6,26 @@ import { Plane, Building2, User } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/shared/utils/cn";
-import { requestTotemApi } from "@/shared/api/totem-api-client";
-import { persistProfileSession, type TotemProfile } from "@/shared/api/profile";
+import { useAuth } from "@/contexts/auth/useAuth";
 
 type TipoCuenta = "viajero" | "admin";
 
 export default function RegistroPage() {
-  const router = useRouter();
+  const router       = useRouter();
+  const { register } = useAuth();
 
-  const [tipoCuenta, setTipoCuenta] = useState<TipoCuenta>("viajero");
-  const [nombre, setNombre] = useState("");
-  const [nombreAgencia, setNombreAgencia] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [tipoCuenta,      setTipoCuenta]      = useState<TipoCuenta>("viajero");
+  const [nombre,          setNombre]          = useState("");
+  const [nombreAgencia,   setNombreAgencia]   = useState("");
+  const [email,           setEmail]           = useState("");
+  const [password,        setPassword]        = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading,         setLoading]         = useState(false);
+  const [error,           setError]           = useState<string | null>(null);
 
   const handleRegistro = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (password !== confirmPassword) {
       setError("Las contraseñas no coinciden.");
       return;
@@ -37,36 +38,24 @@ export default function RegistroPage() {
     setLoading(true);
     setError(null);
 
-    const response = await requestTotemApi("/identity/auth/register", {
-      method: "POST",
-      body: JSON.stringify({
-        email,
-        password,
-        name: nombre,
-        role: tipoCuenta,
-      }),
-    });
-    const data = await response.json() as { access_token?: string; user?: TotemProfile; error?: { message?: string } };
+    try {
+      await register({ email, password, name: nombre, role: tipoCuenta });
 
-    setLoading(false);
+      if (tipoCuenta === "admin" && nombreAgencia) {
+        localStorage.setItem("totem_nombre_agencia", nombreAgencia);
+      }
 
-    if (!response.ok || typeof data.access_token !== "string" || data.user === undefined) {
-      const message = data.error?.message ?? "No se pudo crear la cuenta.";
+      router.push(tipoCuenta === "admin" ? "/onboarding" : "/viajero");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudo crear la cuenta.";
       if (message.includes("already registered") || message.includes("already")) {
         setError("Este correo ya está registrado. ¿Querés iniciar sesión?");
       } else {
         setError(message);
       }
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    localStorage.setItem("totem_token", data.access_token);
-    document.cookie = `totem_token=${data.access_token}; path=/; max-age=604800; SameSite=Lax`;
-    persistProfileSession(data.user);
-    if (tipoCuenta === "admin" && nombreAgencia) {
-      localStorage.setItem("totem_nombre_agencia", nombreAgencia);
-    }
-    router.push(tipoCuenta === "admin" ? "/onboarding" : "/viajero");
   };
 
   return (
@@ -166,7 +155,20 @@ export default function RegistroPage() {
             />
           </div>
 
-
+          {tipoCuenta === "admin" && (
+            <div>
+              <label className="block text-[13px] font-bold text-gray-700 mb-1.5">
+                Nombre de la agencia
+              </label>
+              <input
+                type="text"
+                value={nombreAgencia}
+                onChange={(e) => setNombreAgencia(e.target.value)}
+                className="w-full rounded-md bg-[#F5F6FB] border border-transparent px-4 py-3 text-sm focus:border-[#00B4FC] focus:bg-white focus:outline-none transition-colors"
+                placeholder="Ej: Aventuras del Sur"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-[13px] font-bold text-gray-700 mb-1.5">
@@ -224,7 +226,6 @@ export default function RegistroPage() {
                 : "Crear cuenta"}
             </Button>
           </div>
-
         </form>
 
         <div className="mt-6 mb-6 text-center text-sm text-gray-500 font-medium">

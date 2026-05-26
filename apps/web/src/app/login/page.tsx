@@ -6,51 +6,52 @@ import { Plane } from "lucide-react";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { persistProfileSession, type TotemProfile } from "@/shared/api/profile";
-import { requestTotemApi } from "@/shared/api/totem-api-client";
+import { useAuth } from "@/contexts/auth/useAuth";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Formulario de Login
+// ─────────────────────────────────────────────────────────────────────────────
 function LoginForm() {
-  const router = useRouter();
+  const router    = useRouter();
+  const { login } = useAuth();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect");
-  const registered = searchParams.get("registered");
+  const redirectTo   = searchParams.get("redirect");
+  const registered   = searchParams.get("registered");
 
-  const [email, setEmail] = useState("");
+  const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const response = await requestTotemApi("/identity/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await response.json() as { access_token?: string; user?: TotemProfile; error?: { message?: string } };
-    if (!response.ok || typeof data.access_token !== "string" || data.user === undefined) {
-      setLoading(false);
-      setError(data.error?.message ?? "Credenciales incorrectas. Verifica tu correo y contraseña.");
-      return;
-    }
+    try {
+      const user = await login({ email, password });
 
-    localStorage.setItem("totem_token", data.access_token);
-    document.cookie = `totem_token=${data.access_token}; path=/; max-age=604800; SameSite=Lax`;
-    persistProfileSession(data.user);
-    const destinos: Record<string, string> = {
-      superadmin: "/superadmin",
-      admin: "/admin",
-      usuario: "/viajero",
-      viajero: "/viajero",
-    };
-    const rol = data.user.role === "viajero" ? "usuario" : data.user.role;
-    const sinTenant = (rol === "admin" || rol === "superadmin") && data.user.tenantId === null;
-    const destination = sinTenant ? "/onboarding" : (redirectTo ?? destinos[rol] ?? "/admin");
-    setLoading(false);
-    router.push(destination);
-    router.refresh();
+      const rol = user.role === "viajero" ? "usuario" : user.role;
+      const sinTenant = (rol === "admin" || rol === "superadmin") && user.tenantId === null;
+
+      const destinos: Record<string, string> = {
+        superadmin: "/superadmin",
+        admin:      "/admin",
+        usuario:    "/viajero",
+        viajero:    "/viajero",
+      };
+
+      const destination = sinTenant
+        ? "/onboarding"
+        : (redirectTo ?? destinos[rol] ?? "/admin");
+
+      router.push(destination);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al iniciar sesión.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -65,6 +66,7 @@ function LoginForm() {
           {error}
         </div>
       )}
+
       <div>
         <label className="block text-[13px] font-bold text-gray-700 mb-1.5">
           Correo Electrónico
@@ -78,6 +80,7 @@ function LoginForm() {
           placeholder="correo@ejemplo.com"
         />
       </div>
+
       <div>
         <label className="block text-[13px] font-bold text-gray-700 mb-1.5">
           Contraseña
@@ -93,12 +96,12 @@ function LoginForm() {
       </div>
 
       <div className="flex justify-end mt-1">
-        <a
-          href="#"
+        <Link
+          href="/recuperar-password"
           className="text-xs text-gray-600 font-bold hover:text-[#00B4FC] hover:underline underline-offset-2 transition-colors"
         >
           ¿Has olvidado tu contraseña?
-        </a>
+        </Link>
       </div>
 
       <div className="mt-2">
@@ -115,6 +118,9 @@ function LoginForm() {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Página
+// ─────────────────────────────────────────────────────────────────────────────
 export default function LoginPage() {
   return (
     <main className="flex min-h-screen font-sans bg-white">

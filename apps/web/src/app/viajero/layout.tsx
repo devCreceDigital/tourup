@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { ViajeroSidebar } from "@/contexts/enrollments/ui/navigation/ViajeroSidebar";
 import { requestTotemApi } from "@/shared/api/totem-api-client";
-import { clearProfileSession } from "@/shared/api/profile";
+import { useAuth } from "@/contexts/auth/useAuth";
 
 export default function ViajeroLayout({
   children,
@@ -20,6 +20,7 @@ export default function ViajeroLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const { logout } = useAuth();
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -44,9 +45,7 @@ export default function ViajeroLayout({
   }, []);
 
   const handleLogout = async () => {
-    clearProfileSession();
-    router.push("/login");
-    router.refresh();
+    await logout();
   };
 
   return (

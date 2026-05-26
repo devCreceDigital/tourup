@@ -9,10 +9,12 @@ import {
 } from "lucide-react";
 import { Sidebar } from "@/contexts/platform/ui/navigation/Sidebar";
 import { requestTotemApi } from "@/shared/api/totem-api-client";
-import { clearProfileSession, getCurrentProfile, persistProfileSession } from "@/shared/api/profile";
+import { persistProfileSession } from "@/shared/api/profile";
+import { useAuth } from "@/contexts/auth/useAuth";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const { user, isLoading, logout } = useAuth();
 
   const [colorPrimario, setColorPrimario] = useState("#5B4FE8");
   const [checking, setChecking] = useState(true);
@@ -59,81 +61,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Sincroniza datos del usuario desde el AuthContext
   useEffect(() => {
-    const rol = localStorage.getItem("totem_rol");
-    if (rol === "superadmin") { router.replace("/superadmin"); return; }
-    if (rol && rol !== "superadmin") {
-      const nombre = localStorage.getItem("totem_nombre") || "Admin";
-      const email = localStorage.getItem("totem_email") || "";
-      setUserName(nombre); setUserEmail(email);
-      setUserInitials(nombre.substring(0,2).toUpperCase());
-      setNombreAgencia(localStorage.getItem("totem_nombre_agencia") || "");
-      // Siempre refrescar datos del tenant desde backend
-      const token = localStorage.getItem("totem_token");
-      if (token) {
-        getCurrentProfile().then(async perfil => {
-          if (perfil?.tenantId) {
-            persistProfileSession(perfil);
-            const r = await requestTotemApi("/tenancy/preferences");
-            if (r.ok) {
-              const t = await r.json();
-              if (t.name) { setNombreAgencia(t.name); localStorage.setItem("totem_nombre_agencia", t.name); }
-              if (t.logoUrl) setLogoAgencia(t.logoUrl);
-              if (t.domain) setDominio(t.domain);
-              if (t.primaryColor) setColorPrimario(t.primaryColor);
-            }
-          }
-        }).catch(() => {});
-      }
-      setChecking(false);
-    }
-    if (!rol) {
-      const token = localStorage.getItem("totem_token");
-      if (token) {
-        getCurrentProfile().then(async perfil => {
-          if (perfil === null) {
-            setChecking(false);
-            return;
-          }
-          persistProfileSession(perfil);
-          const normalizedRole = perfil.role === "viajero" ? "usuario" : perfil.role;
-          if (normalizedRole === "superadmin") { router.replace("/superadmin"); return; }
-          setUserName(perfil.name || "Admin");
-          setUserEmail(perfil.email || "");
-          setUserInitials((perfil.name || "AD").substring(0,2).toUpperCase());
-          if (perfil.tenantId) {
-            const r = await requestTotemApi("/tenancy/preferences");
-            if (r.ok) {
-              const t = await r.json();
-              if (t.name) { setNombreAgencia(t.name); localStorage.setItem("totem_nombre_agencia", t.name); }
-              if (t.logoUrl) setLogoAgencia(t.logoUrl);
-              if (t.domain) setDominio(t.domain);
-              if (t.primaryColor) setColorPrimario(t.primaryColor);
-            }
-          }
-          setChecking(false);
-        }).catch(() => setChecking(false));
-      } else setChecking(false);
-    } else setChecking(false);
-  }, [router]);
+    if (isLoading) return;
+    if (!user) { setChecking(false); return; }
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const me = await getCurrentProfile();
-        if (me === null) return;
-        persistProfileSession(me);
-        if (me.name) { setUserName(me.name); setUserInitials(me.name.substring(0,2).toUpperCase()); }
-        if (!me.tenantId) return;
-        const cfg = await (await requestTotemApi("/tenancy/preferences")).json();
-        if (cfg.color_primario) setColorPrimario(cfg.color_primario);
-        if (cfg.logo_url) setLogoAgencia(cfg.logo_url);
-        if (cfg.dominio) setDominio(cfg.dominio);
-        if (cfg.nombre) { setNombreAgencia(cfg.nombre); localStorage.setItem("totem_nombre_agencia", cfg.nombre); }
-      } catch {}
-    };
-    void load();
-  }, []);
+    // Redirige superadmin a su área
+    if (user.role === "superadmin") { router.replace("/superadmin"); return; }
+
+    setUserName(user.name || "Admin");
+    setUserEmail(user.email || "");
+    setUserInitials((user.name || "AD").substring(0, 2).toUpperCase());
+    persistProfileSession(user);
+
+    // Carga preferencias del tenant
+    if (user.tenantId) {
+      requestTotemApi("/tenancy/preferences")
+        .then(async (r) => {
+          if (!r.ok) return;
+          const t = await r.json() as Record<string, unknown>;
+          if (typeof t.name === "string")         { setNombreAgencia(t.name); localStorage.setItem("totem_nombre_agencia", t.name); }
+          if (typeof t.logoUrl === "string")       setLogoAgencia(t.logoUrl);
+          if (typeof t.domain === "string")        setDominio(t.domain);
+          if (typeof t.primaryColor === "string")  setColorPrimario(t.primaryColor);
+        })
+        .catch(() => {});
+    }
+    setChecking(false);
+  }, [user, isLoading, router]);
+
+  // useEffect de refresh manual eliminado — el AuthContext maneja la sesión
 
   useEffect(() => {
     let cancelled = false;
@@ -159,9 +116,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   const handleLogout = async () => {
-    clearProfileSession();
-    router.push("/login");
-    router.refresh();
+    await logout();
   };
 
   const filteredLinks = search.trim()
