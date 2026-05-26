@@ -2,11 +2,25 @@ import { randomUUID } from "node:crypto";
 import { toJsonObject, type TenantId } from "@totem/shared-kernel";
 import { createLogger } from "./logger.js";
 
+/** Número máximo de reintentos antes de abandonar un evento del outbox */
+export const OUTBOX_MAX_RETRIES = Number(process.env.OUTBOX_MAX_RETRIES ?? "5");
+
+type OutboxEvent = {
+  id: string;
+  eventType: string;
+  tenantId: string | null;
+  aggregateId: string;
+  payload: unknown;
+  occurredAt: Date;
+  retryCount: number;
+};
+
 type OutboxClient = {
   readonly outboxEvent?: {
     readonly create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
-    readonly findMany: (args: Record<string, unknown>) => Promise<readonly { id: string; eventType: string; tenantId: string | null; aggregateId: string; payload: unknown; occurredAt: Date }[]>;
+    readonly findMany: (args: Record<string, unknown>) => Promise<readonly OutboxEvent[]>;
     readonly update: (args: { where: { id: string }; data: Record<string, unknown> }) => Promise<unknown>;
+    readonly count: (args: Record<string, unknown>) => Promise<number>;
   };
 };
 
@@ -42,14 +56,7 @@ export function startOutboxProcessor(serviceName: string, client: unknown): void
   const log = createLogger(serviceName);
   const target = eventBusUrl.replace(/\/$/, "");
 
-  const dispatchEvent = async (event: {
-    id: string;
-    eventType: string;
-    tenantId: string | null;
-    aggregateId: string;
-    payload: unknown;
-    occurredAt: Date;
-  }): Promise<void> => {
+  const dispatchEvent = async (event: OutboxEvent): Promise<void> => {
     const response = await fetch(target, {
       method: "POST",
       headers: {
@@ -72,13 +79,25 @@ export function startOutboxProcessor(serviceName: string, client: unknown): void
     if (!response.ok) {
       throw new Error(`Event bus responded ${response.status} for event ${event.id}`);
     }
-    await outboxClient.outboxEvent!.update({ where: { id: event.id }, data: { processedAt: new Date() } });
-    log.debug("Outbox event dispatched", { eventId: event.id, eventType: event.eventType, aggregateId: event.aggregateId });
+    await outboxClient.outboxEvent!.update({
+      where: { id: event.id },
+      data: { processedAt: new Date() }
+    });
+    log.debug("Outbox event dispatched", {
+      eventId: event.id,
+      eventType: event.eventType,
+      aggregateId: event.aggregateId,
+      retryCount: event.retryCount
+    });
   };
 
   const tick = async () => {
+    // Solo procesar eventos que aún no superaron el máximo de reintentos
     const events = await outboxClient.outboxEvent!.findMany({
-      where: { processedAt: null },
+      where: {
+        processedAt: null,
+        retryCount: { lt: OUTBOX_MAX_RETRIES }
+      },
       orderBy: { occurredAt: "asc" },
       take: 25
     });
@@ -88,12 +107,39 @@ export function startOutboxProcessor(serviceName: string, client: unknown): void
       try {
         await dispatchEvent(event);
       } catch (error) {
-        log.error("Outbox dispatch failed; skipping event until next tick", {
-          eventId: event.id,
-          eventType: event.eventType,
-          aggregateId: event.aggregateId,
-          error: error instanceof Error ? error : new Error(String(error))
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const nextRetry = event.retryCount + 1;
+        const willGiveUp = nextRetry >= OUTBOX_MAX_RETRIES;
+
+        // Persistir el conteo de reintentos para que no se procese indefinidamente
+        await outboxClient.outboxEvent!.update({
+          where: { id: event.id },
+          data: {
+            retryCount: nextRetry,
+            lastError: errorMessage.slice(0, 1000),
+            lastErrorAt: new Date()
+          }
         });
+
+        if (willGiveUp) {
+          log.error("Outbox event exhausted max retries; giving up", {
+            eventId: event.id,
+            eventType: event.eventType,
+            aggregateId: event.aggregateId,
+            retryCount: nextRetry,
+            maxRetries: OUTBOX_MAX_RETRIES,
+            lastError: errorMessage
+          });
+        } else {
+          log.warn("Outbox dispatch failed; will retry", {
+            eventId: event.id,
+            eventType: event.eventType,
+            aggregateId: event.aggregateId,
+            retryCount: nextRetry,
+            maxRetries: OUTBOX_MAX_RETRIES,
+            error: error instanceof Error ? error : new Error(String(error))
+          });
+        }
       }
     }
   };

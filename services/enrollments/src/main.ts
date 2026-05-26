@@ -1,4 +1,4 @@
-import { createPostgresPrismaAdapter, createTenantRlsPrismaClient, startHttpService, startOutboxProcessor } from "@totem/service-runtime";
+import { createDbHealthCheck, createPostgresPrismaAdapter, createTenantRlsPrismaClient, startHttpService, startOutboxProcessor } from "@totem/service-runtime";
 import { PrismaClient } from "./generated/prisma/client.js";
 import { PrismaEnrollmentRepository } from "./adapters/prisma/repository.js";
 import { PrismaEnrollmentRepository as PrismaEnrollmentBusinessRepository } from "./adapters/prisma/enrollment-repository.js";
@@ -10,4 +10,4 @@ const repository = new PrismaEnrollmentRepository(prisma);
 const businessRepository = new PrismaEnrollmentBusinessRepository(prisma);
 
 startOutboxProcessor("enrollments", prisma);
-startHttpService("enrollments", [...createRoutes(repository), ...createEnrollmentBusinessRoutes(businessRepository)]);
+startHttpService("enrollments", [...createRoutes(repository), ...createEnrollmentBusinessRoutes(businessRepository)], { healthCheck: createDbHealthCheck(prisma) });

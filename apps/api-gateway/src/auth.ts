@@ -20,6 +20,8 @@ const publicPathPatterns: readonly RegExp[] = [
   /^\/identity\/auth\/register$/,
   /^\/identity\/auth\/forgot-password$/,
   /^\/identity\/auth\/reset-password$/,
+  /^\/identity\/auth\/verify-email$/,
+  /^\/identity\/auth\/resend-verification$/,
   /^\/trips\/?$/,
   /^\/trips\/public(?:\/|$)/,
   /^\/assistant\/sessions\/?$/,

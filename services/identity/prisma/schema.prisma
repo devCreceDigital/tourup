@@ -12,18 +12,33 @@ datasource db {
 }
 
 model ProfileRecord {
-  id             String   @id @db.Uuid
-  tenantId       String?  @map("tenant_id") @db.Uuid
-  status         String
-  version        Int      @default(1)
-  idempotencyKey String?  @unique @map("idempotency_key")
-  payload        Json
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id              String    @id @db.Uuid
+  tenantId        String?   @map("tenant_id") @db.Uuid
+  status          String
+  version         Int       @default(1)
+  idempotencyKey  String?   @unique @map("idempotency_key")
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  payload         Json
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   @@index([tenantId])
   @@schema("identity")
   @@map("profiles")
+}
+
+model EmailVerificationRecord {
+  id        String    @id @db.Uuid
+  email     String
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([email])
+  @@index([expiresAt])
+  @@schema("identity")
+  @@map("email_verifications")
 }
 
 model OutboxEvent {
@@ -35,8 +50,13 @@ model OutboxEvent {
   occurredAt    DateTime @default(now()) @map("occurred_at")
   processedAt   DateTime? @map("processed_at")
 
+  retryCount    Int       @default(0) @map("retry_count")
+  lastError     String?   @map("last_error")
+  lastErrorAt   DateTime? @map("last_error_at")
+
   @@index([tenantId])
   @@index([processedAt])
+  @@index([retryCount])
   @@schema("identity")
   @@map("profiles_outbox")
 }

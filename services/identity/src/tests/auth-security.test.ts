@@ -11,6 +11,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   computeLockoutExpiry,
+  EMAIL_VERIFICATION_TTL_MS,
+  generateEmailVerificationToken,
   generateResetToken,
   hashPassword,
   isResetTokenExpired,
@@ -198,5 +200,37 @@ describe("isResetTokenExpired", () => {
     const past = new Date(now.getTime() - 1);
     const usedAt = new Date(now.getTime() - 500);
     assert.equal(isResetTokenExpired({ expiresAt: past, usedAt }, now), true);
+  });
+});
+
+// ─── generateEmailVerificationToken ───────────────────────────────────────────
+describe("generateEmailVerificationToken", () => {
+  const now = new Date("2025-06-01T10:00:00.000Z");
+
+  it("genera rawToken no vacío en formato base64url", () => {
+    const { rawToken } = generateEmailVerificationToken(now);
+    assert.ok(rawToken.length > 0);
+    assert.match(rawToken, /^[A-Za-z0-9\-_]+$/);
+  });
+
+  it("rawToken y tokenHash son distintos", () => {
+    const { rawToken, tokenHash } = generateEmailVerificationToken(now);
+    assert.notEqual(rawToken, tokenHash);
+    assert.equal(tokenHash.length, 64); // SHA-256 hex
+  });
+
+  it("dos tokens generados son siempre distintos (aleatoriedad)", () => {
+    const t1 = generateEmailVerificationToken(now);
+    const t2 = generateEmailVerificationToken(now);
+    assert.notEqual(t1.rawToken, t2.rawToken);
+  });
+
+  it(`expiresAt es now + EMAIL_VERIFICATION_TTL_MS (24 horas)`, () => {
+    const { expiresAt } = generateEmailVerificationToken(now);
+    assert.equal(expiresAt.getTime(), now.getTime() + EMAIL_VERIFICATION_TTL_MS);
+  });
+
+  it("EMAIL_VERIFICATION_TTL_MS es 24 horas (86400000 ms)", () => {
+    assert.equal(EMAIL_VERIFICATION_TTL_MS, 86_400_000);
   });
 });

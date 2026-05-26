@@ -1,4 +1,4 @@
-import { assertRuntimeConfiguration, createPostgresPrismaAdapter, createTenantRlsPrismaClient, startOutboxProcessor } from "@totem/service-runtime";
+import { assertRuntimeConfiguration, createDbHealthCheck, createPostgresPrismaAdapter, createTenantRlsPrismaClient, startOutboxProcessor } from "@totem/service-runtime";
 import { PrismaClient } from "./generated/prisma/client.js";
 import { PrismaChatRepository } from "./adapters/prisma/chat-repository.js";
 import { startAssistantHttpServer } from "./adapters/http/assistant-http-server.js";

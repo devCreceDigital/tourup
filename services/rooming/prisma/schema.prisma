@@ -53,8 +53,13 @@ model OutboxEvent {
   occurredAt    DateTime @default(now()) @map("occurred_at")
   processedAt   DateTime? @map("processed_at")
 
+  retryCount    Int       @default(0) @map("retry_count")
+  lastError     String?   @map("last_error")
+  lastErrorAt   DateTime? @map("last_error_at")
+
   @@index([tenantId])
   @@index([processedAt])
+  @@index([retryCount])
   @@schema("rooming")
   @@map("rooming_plans_outbox")
 }

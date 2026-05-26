@@ -2,12 +2,12 @@ import { createServer, type IncomingHttpHeaders, type IncomingMessage } from "no
 import { assertRuntimeConfiguration, createLogger } from "@totem/service-runtime";
 import { applyTrustedIdentityHeaders, authenticateGatewayRequest, isPublicPath } from "./auth.js";
 import { loadServiceRegistry } from "./service-registry.js";
-import { GatewayRateLimiter, extractClientIp } from "./rate-limit.js";
+import { createGatewayRateLimiter, extractClientIp } from "./rate-limit.js";
 
 assertRuntimeConfiguration("api-gateway");
 
 const log = createLogger("api-gateway");
-const rateLimiter = new GatewayRateLimiter();
+const rateLimiter = createGatewayRateLimiter();
 const registry = loadServiceRegistry(process.env);
 const port = Number(process.env.PORT ?? "4100");
 const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001")
@@ -104,7 +104,7 @@ async function handle(request: Request): Promise<Response> {
 
   // ── Rate limiting (después de auth, para usar userId como clave) ──────────
   try {
-    rateLimiter.assertAllowed(principal.userId, extractClientIp(request));
+    await rateLimiter.assertAllowed(principal.userId, extractClientIp(request));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Too many requests.";
     const retryAfter = (error as { retryAfter?: number }).retryAfter;

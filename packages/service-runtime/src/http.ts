@@ -130,7 +130,12 @@ function findRoute(routes: readonly Route[], method: string, path: string): Rout
   return null;
 }
 
-export function startHttpService(serviceName: string, routes: readonly Route[]): void {
+export type ServiceOptions = {
+  /** Callback de health check opcional. Recibe el resultado en /health además del status base. */
+  readonly healthCheck?: () => Promise<Record<string, unknown>>;
+};
+
+export function startHttpService(serviceName: string, routes: readonly Route[], options?: ServiceOptions): void {
   assertRuntimeConfiguration(serviceName);
   const port = Number(process.env.PORT ?? "3000");
   const limiter = defaultRateLimiter();
@@ -149,7 +154,17 @@ export function startHttpService(serviceName: string, routes: readonly Route[]):
       }
 
       if (method === "GET" && path === "/health") {
-        send(response, 200, { status: "ok", service: serviceName, architecture: "ddd-hexagonal-microservice" });
+        if (options?.healthCheck !== undefined) {
+          try {
+            const extra = await options.healthCheck();
+            const httpStatus = extra["status"] === "degraded" ? 503 : 200;
+            send(response, httpStatus, { ...extra, service: serviceName, architecture: "ddd-hexagonal-microservice" });
+          } catch {
+            send(response, 503, { status: "degraded", service: serviceName, architecture: "ddd-hexagonal-microservice" });
+          }
+        } else {
+          send(response, 200, { status: "ok", service: serviceName, architecture: "ddd-hexagonal-microservice" });
+        }
         return;
       }
 

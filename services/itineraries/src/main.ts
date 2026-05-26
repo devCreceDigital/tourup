@@ -1,4 +1,4 @@
-import { createPostgresPrismaAdapter, createTenantRlsPrismaClient, startHttpService, startOutboxProcessor } from "@totem/service-runtime";
+import { createDbHealthCheck, createPostgresPrismaAdapter, createTenantRlsPrismaClient, startHttpService, startOutboxProcessor } from "@totem/service-runtime";
 import { PrismaClient } from "./generated/prisma/client.js";
 import { PrismaItineraryRepository } from "./adapters/prisma/repository.js";
 import { PrismaItineraryRepository as PrismaItineraryBusinessRepository } from "./adapters/prisma/itinerary-repository.js";
@@ -10,4 +10,4 @@ const repository = new PrismaItineraryRepository(prisma);
 const businessRepository = new PrismaItineraryBusinessRepository(prisma);
 
 startOutboxProcessor("itineraries", prisma);
-startHttpService("itineraries", [...createRoutes(repository), ...createItineraryBusinessRoutes(businessRepository)]);
+startHttpService("itineraries", [...createRoutes(repository), ...createItineraryBusinessRoutes(businessRepository)], { healthCheck: createDbHealthCheck(prisma) });

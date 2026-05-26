@@ -4,7 +4,14 @@ import { NotFoundError, UnauthorizedError, parseEntityId, parseTenantId, toJsonO
 import type { Route } from "@totem/service-runtime";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import type { Profile, ProfileRole } from "../../domain/profile.js";
-import { computeLockoutExpiry, generateResetToken, hashPassword, isResetTokenExpired, verifyPassword } from "../../domain/password.js";
+import {
+  computeLockoutExpiry,
+  generateEmailVerificationToken,
+  generateResetToken,
+  hashPassword,
+  isResetTokenExpired,
+  verifyPassword
+} from "../../domain/password.js";
 
 function record(value: unknown): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error("Request body must be an object.");
@@ -120,6 +127,31 @@ async function findProfileByEmail(prisma: PrismaClient, email: string): Promise<
   return record === null ? null : record.payload as Profile;
 }
 
+async function sendInternalNotification(input: {
+  email: string;
+  subject: string;
+  body: string;
+}): Promise<void> {
+  const notificationsUrl = process.env.NOTIFICATIONS_SERVICE_URL;
+  if (typeof notificationsUrl !== "string" || notificationsUrl.trim().length === 0) return;
+  const secret = process.env.SERVICE_INTERNAL_SECRET;
+  await fetch(`${notificationsUrl.replace(/\/$/, "")}/notifications/send-email`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(secret ? { "x-internal-service-secret": secret } : {}),
+      "x-internal-user-role": "system"
+    },
+    body: JSON.stringify({
+      recipientEmail: input.email,
+      subject: input.subject,
+      body: input.body
+    })
+  }).catch(() => {
+    // Silenciar — el envío de email es best-effort y no debe bloquear el flujo principal
+  });
+}
+
 export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[] {
   return [
     {
@@ -141,6 +173,10 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
           isActive: true
         };
 
+        const requireVerification = process.env.REQUIRE_EMAIL_VERIFICATION === "true";
+        const { rawToken: verificationToken, tokenHash: verificationHash, expiresAt: verificationExpiry } =
+          generateEmailVerificationToken(new Date());
+
         await prisma.$transaction(async (tx) => {
           const existing = await tx.credentialRecord.findUnique({ where: { email } });
           if (existing !== null) throw new Error("Email is already registered.");
@@ -150,6 +186,8 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
               tenantId: profile.tenantId === null ? null : String(profile.tenantId),
               status: "active",
               version: 1,
+              // Si no se requiere verificación, marcar email como verificado desde el registro
+              emailVerifiedAt: requireVerification ? null : new Date(),
               payload: toJsonObject(profile)
             }
           });
@@ -160,7 +198,27 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
               passwordHash: hashPassword(password)
             }
           });
+          if (requireVerification) {
+            await tx.emailVerificationRecord.create({
+              data: {
+                id: randomUUID(),
+                email,
+                tokenHash: verificationHash,
+                expiresAt: verificationExpiry
+              }
+            });
+          }
         });
+
+        // Enviar email de verificación (best-effort, no bloquea el registro)
+        if (requireVerification) {
+          const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+          await sendInternalNotification({
+            email,
+            subject: "Verifica tu dirección de email",
+            body: `Hola ${profile.name},\n\nVerifica tu email haciendo clic en el siguiente enlace:\n${appUrl}/verify-email?token=${verificationToken}\n\nEste enlace expira en 24 horas.`
+          });
+        }
 
         const token = await issueTokenPair(prisma, profile, request);
         return {
@@ -169,6 +227,7 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
           token_type: "Bearer",
           expires_in: token.expiresIn,
           refresh_expires_in: token.refreshExpiresIn,
+          emailVerified: !requireVerification,
           user: profileResponse(profile)
         };
       }
@@ -281,22 +340,12 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
             }
           });
 
-          // Notificación por email — integración opcional con Notifications service
-          const notificationsUrl = process.env.NOTIFICATIONS_SERVICE_URL;
-          if (typeof notificationsUrl === "string" && notificationsUrl.length > 0) {
-            const secret = process.env.SERVICE_INTERNAL_SECRET;
-            await fetch(`${notificationsUrl.replace(/\/$/, "")}/notifications/email/password-reset`, {
-              method: "POST",
-              headers: {
-                "content-type": "application/json",
-                ...(secret ? { "x-internal-service-secret": secret } : {}),
-                "x-internal-user-role": "system"
-              },
-              body: JSON.stringify({ email, token: rawToken, expiresAt: expiresAt.toISOString() })
-            }).catch(() => {
-              // No lanzar si el servicio de notificaciones no está disponible
-            });
-          }
+          const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+          await sendInternalNotification({
+            email,
+            subject: "Restablece tu contraseña",
+            body: `Recibimos una solicitud para restablecer la contraseña de tu cuenta.\n\nHaz clic en el siguiente enlace (válido por 1 hora):\n${appUrl}/reset-password?token=${rawToken}\n\nSi no solicitaste este cambio, puedes ignorar este mensaje.`
+          });
         }
 
         // Respuesta siempre 200 para no revelar si el email existe o no
@@ -345,6 +394,77 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
         });
 
         return { message: "Password updated successfully. Please log in again." };
+      }
+    },
+
+    // ── Verify email ─────────────────────────────────────────────────────────
+    {
+      method: "POST",
+      path: "/identity/auth/verify-email",
+      handler: async (request) => {
+        const body = record(request.body);
+        const rawToken = text(body, "token");
+
+        const tokenHash = createHash("sha256").update(rawToken, "utf-8").digest("hex");
+        const verRecord = await prisma.emailVerificationRecord.findUnique({ where: { tokenHash } });
+
+        if (verRecord === null || verRecord.usedAt !== null || verRecord.expiresAt <= new Date()) {
+          throw new Error("Invalid or expired email verification token.");
+        }
+
+        await prisma.$transaction(async (tx) => {
+          await tx.emailVerificationRecord.update({
+            where: { id: verRecord.id },
+            data: { usedAt: new Date() }
+          });
+          await tx.profileRecord.updateMany({
+            where: {
+              payload: { path: ["email"], equals: verRecord.email },
+              emailVerifiedAt: null
+            },
+            data: { emailVerifiedAt: new Date() }
+          });
+        });
+
+        return { message: "Email verified successfully. You can now log in." };
+      }
+    },
+
+    // ── Resend verification email ─────────────────────────────────────────────
+    {
+      method: "POST",
+      path: "/identity/auth/resend-verification",
+      handler: async (request) => {
+        const body = record(request.body);
+        const email = normalizeEmail(text(body, "email"));
+
+        const profileRecord = await prisma.profileRecord.findFirst({
+          where: { payload: { path: ["email"], equals: email }, emailVerifiedAt: null }
+        });
+
+        if (profileRecord !== null) {
+          // Invalidar tokens anteriores
+          await prisma.emailVerificationRecord.updateMany({
+            where: { email, usedAt: null },
+            data: { usedAt: new Date() }
+          });
+
+          const { rawToken, tokenHash, expiresAt } = generateEmailVerificationToken(new Date());
+          await prisma.emailVerificationRecord.create({
+            data: { id: randomUUID(), email, tokenHash, expiresAt }
+          });
+
+          const profile = profileRecord.payload as Profile;
+          const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+          await sendInternalNotification({
+            email,
+            subject: "Verifica tu dirección de email",
+            body: `Hola ${profile.name},\n\nVerifica tu email haciendo clic en el siguiente enlace:\n${appUrl}/verify-email?token=${rawToken}\n\nEste enlace expira en 24 horas.`
+          });
+        }
+
+        // Siempre 200 — no revelar si el email existe
+        return { message: "If this email is pending verification, a new link has been sent." };
       }
     }
   ];
