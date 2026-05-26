@@ -10,8 +10,9 @@
 #   4. test:unit — ejecuta los tests unitarios con Node.js built-in runner
 #
 # Tests en CI:
-#   - services/identity  → auth-security.test.ts + auth-flows.test.ts (57 tests)
-#   - apps/api-gateway   → rate-limit.test.ts (34 tests)
+#   - services/identity       → auth-security.test.ts + auth-flows.test.ts (57 tests)
+#   - apps/api-gateway        → rate-limit.test.ts (34 tests)
+#   - services/notifications  → idempotency.test.ts (13 tests)
 #   No necesitan base de datos — usan mocks en memoria.
 # ──────────────────────────────────────────────────────────────────────────────
 

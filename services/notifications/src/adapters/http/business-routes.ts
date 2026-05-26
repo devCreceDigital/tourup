@@ -70,6 +70,44 @@ function createEmailPort(): EmailPort {
   return new ConsoleEmailPort();
 }
 
+// ── Idempotency store (deduplicación de emails del sistema) ──────────────────
+// Previene el envío duplicado de emails cuando identity reintenta una llamada
+// fallida. TTL de 24 horas; compactación automática cada 100 escrituras.
+//
+// Estructura: Map<idempotencyKey, expiryTimestamp>
+// Las funciones se exportan con prefijo _ para uso exclusivo en tests.
+export const IDEM_TTL_MS = 24 * 60 * 60 * 1000; // 24 h
+export const _idempotencyStore = new Map<string, number>();
+
+/**
+ * Comprueba si la clave ya fue procesada y sigue vigente.
+ * @returns true  → duplicado (no enviar)
+ *          false → clave nueva o expirada (procesar normalmente)
+ */
+export function isDuplicate(key: string): boolean {
+  const expiry = _idempotencyStore.get(key);
+  if (expiry === undefined) return false;
+  if (expiry <= Date.now()) {
+    _idempotencyStore.delete(key); // expirada → limpiar
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Registra la clave como procesada.
+ * Compacta entradas expiradas cada 100 escrituras para evitar memory leaks.
+ */
+export function markProcessed(key: string): void {
+  _idempotencyStore.set(key, Date.now() + IDEM_TTL_MS);
+  if (_idempotencyStore.size % 100 === 0) {
+    const now = Date.now();
+    for (const [k, expiry] of _idempotencyStore) {
+      if (expiry <= now) _idempotencyStore.delete(k);
+    }
+  }
+}
+
 export function createNotificationBusinessRoutes(repository: NotificationRepository): readonly Route[] {
   const emailPort = createEmailPort();
   const createNotification = new CreateNotification(repository);
@@ -119,7 +157,21 @@ export function createNotificationBusinessRoutes(repository: NotificationReposit
 
         // ── Flujo 1: llamada interna del sistema (sin tenant) ────────────────
         if (request.context.role === "system") {
+          // Deduplicación: si identity reintenta la misma operación (mismo
+          // idempotency key) respondemos OK sin reenviar el email.
+          const idemKey =
+            typeof request.headers["x-idempotency-key"] === "string"
+              ? request.headers["x-idempotency-key"]
+              : null;
+
+          if (idemKey !== null && isDuplicate(idemKey)) {
+            return { sent: true, deduplicated: true };
+          }
+
           await sendTransactional.execute({ to: recipientEmail, subject, body: emailBody });
+
+          if (idemKey !== null) markProcessed(idemKey);
+
           return { sent: true, message: "Email sent successfully." };
         }
 

@@ -177,10 +177,21 @@ async function findProfileRecordByEmail(prisma: PrismaClient, email: string) {
   return prisma.profileRecord.findFirst({ where: { payload: { path: ["email"], equals: email } } });
 }
 
+/**
+ * Envía una notificación interna al servicio de notifications.
+ *
+ * Incluye un `idempotencyKey` determinista derivado del tokenHash del evento
+ * que originó el email (verificación o reset). Si identity reintenta la llamada
+ * tras un timeout, notifications detecta la clave duplicada y NO reenvía el email.
+ *
+ * Diseño: best-effort — un fallo de red no bloquea el flujo principal.
+ */
 async function sendInternalNotification(input: {
   email: string;
   subject: string;
   body: string;
+  /** Clave determinista basada en el tokenHash del evento — permite deduplicar reintentos. */
+  idempotencyKey: string;
 }): Promise<void> {
   const notificationsUrl = process.env.NOTIFICATIONS_SERVICE_URL;
   if (typeof notificationsUrl !== "string" || notificationsUrl.trim().length === 0) return;
@@ -190,7 +201,9 @@ async function sendInternalNotification(input: {
     headers: {
       "content-type": "application/json",
       ...(secret ? { "x-internal-service-secret": secret } : {}),
-      "x-internal-user-role": "system"
+      "x-internal-user-role": "system",
+      // Clave idempotente: si llega dos veces, notifications la deduplica
+      "x-idempotency-key": input.idempotencyKey
     },
     body: JSON.stringify({
       recipientEmail: input.email,
@@ -269,7 +282,9 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
           await sendInternalNotification({
             email,
             subject: "Verifica tu dirección de email",
-            body: `Hola ${profile.name},\n\nVerifica tu email haciendo clic en el siguiente enlace:\n${appUrl}/verify-email?token=${verificationToken}\n\nEste enlace expira en 24 horas.`
+            body: `Hola ${profile.name},\n\nVerifica tu email haciendo clic en el siguiente enlace:\n${appUrl}/verify-email?token=${verificationToken}\n\nEste enlace expira en 24 horas.`,
+            // Clave basada en el hash del token — idéntica si se reintenta el mismo token
+            idempotencyKey: `verify-email:${verificationHash}`
           });
         }
 
@@ -407,7 +422,9 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
           await sendInternalNotification({
             email,
             subject: "Restablece tu contraseña",
-            body: `Recibimos una solicitud para restablecer la contraseña de tu cuenta.\n\nHaz clic en el siguiente enlace (válido por 1 hora):\n${appUrl}/reset-password?token=${rawToken}\n\nSi no solicitaste este cambio, puedes ignorar este mensaje.`
+            body: `Recibimos una solicitud para restablecer la contraseña de tu cuenta.\n\nHaz clic en el siguiente enlace (válido por 1 hora):\n${appUrl}/reset-password?token=${rawToken}\n\nSi no solicitaste este cambio, puedes ignorar este mensaje.`,
+            // tokenHash es determinista para este evento de reset específico
+            idempotencyKey: `forgot-password:${tokenHash}`
           });
         }
 
@@ -516,7 +533,9 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
           await sendInternalNotification({
             email,
             subject: "Verifica tu dirección de email",
-            body: `Hola ${profile.name},\n\nVerifica tu email haciendo clic en el siguiente enlace:\n${appUrl}/verify-email?token=${rawToken}\n\nEste enlace expira en 24 horas.`
+            body: `Hola ${profile.name},\n\nVerifica tu email haciendo clic en el siguiente enlace:\n${appUrl}/verify-email?token=${rawToken}\n\nEste enlace expira en 24 horas.`,
+            // tokenHash del nuevo token — si se reintenta exactamente este send, no duplica
+            idempotencyKey: `resend-verify:${tokenHash}`
           });
         }
 
