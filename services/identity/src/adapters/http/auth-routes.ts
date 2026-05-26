@@ -60,6 +60,22 @@ function hashRefreshToken(rawToken: string): string {
   return createHash("sha256").update(rawToken, "utf-8").digest("hex");
 }
 
+/**
+ * Retorna la URL pública de la aplicación desde APP_URL.
+ * En producción (APP_ENV=production) la variable es obligatoria — falla en caliente
+ * para que el error sea visible en el arranque, no silencioso en el primer email.
+ * En local/dev usa "http://localhost:3000" como fallback documentado.
+ */
+function getAppUrl(): string {
+  const url = process.env.APP_URL;
+  if (typeof url === "string" && url.trim().length > 0) return url.trim();
+  if (process.env.APP_ENV === "production") {
+    throw new Error("APP_URL must be configured in production environments.");
+  }
+  // Fallback solo para desarrollo local — nunca llegaría a producción
+  return "http://localhost:3000";
+}
+
 async function issueToken(profile: Profile): Promise<{ accessToken: string; expiresIn: number }> {
   const expiresIn = tokenTtlSeconds();
   let token = new SignJWT({
@@ -212,7 +228,7 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
 
         // Enviar email de verificación (best-effort, no bloquea el registro)
         if (requireVerification) {
-          const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+          const appUrl = getAppUrl();
           await sendInternalNotification({
             email,
             subject: "Verifica tu dirección de email",
@@ -340,7 +356,7 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
             }
           });
 
-          const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+          const appUrl = getAppUrl();
           await sendInternalNotification({
             email,
             subject: "Restablece tu contraseña",
@@ -455,7 +471,7 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
           });
 
           const profile = profileRecord.payload as Profile;
-          const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+          const appUrl = getAppUrl();
           await sendInternalNotification({
             email,
             subject: "Verifica tu dirección de email",

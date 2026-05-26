@@ -9,17 +9,53 @@
 #   1. Docker Desktop corriendo
 #   2. Postgres levantado: docker compose up postgres -d
 #   3. pnpm instalado
+#   4. .env en la raíz del repo (copia de .env.example con tus valores)
 
 param(
-    [string]$DbHost     = "localhost",
-    [string]$DbPort     = "5432",
-    [string]$DbName     = "totem_hub",
-    [string]$DbUser     = "totem",
-    [string]$DbPassword = "totem_dev_password"
+    [string]$DbHost,
+    [string]$DbPort,
+    [string]$DbName,
+    [string]$DbUser,
+    [string]$DbPassword
 )
 
 $ErrorActionPreference = "Stop"
 $Root = "C:\Users\Ronaldinhoo\tourup"
+
+# ── 1. Leer variables desde el archivo .env de la raíz ───────────────────────
+$envFile = Join-Path $Root ".env"
+if (Test-Path $envFile) {
+    Get-Content $envFile | ForEach-Object {
+        # Ignorar comentarios y líneas vacías; parsear CLAVE=valor
+        if ($_ -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') {
+            $k = $matches[1].Trim()
+            $v = $matches[2].Trim()
+            # No sobreescribir variables que ya existan en el entorno de la sesión
+            if ([string]::IsNullOrEmpty([System.Environment]::GetEnvironmentVariable($k))) {
+                [System.Environment]::SetEnvironmentVariable($k, $v)
+            }
+        }
+    }
+    Write-Host "✓ Variables de entorno cargadas desde .env" -ForegroundColor DarkGray
+} else {
+    Write-Host "⚠ No se encontró .env — crea uno desde .env.example" -ForegroundColor Yellow
+}
+
+# ── 2. Resolver credenciales (param > env > error) ───────────────────────────
+if (-not $DbHost)     { $DbHost     = if ($env:POSTGRES_HOST) { $env:POSTGRES_HOST } else { "localhost" } }
+if (-not $DbPort)     { $DbPort     = if ($env:POSTGRES_PORT) { $env:POSTGRES_PORT } else { "5432" } }
+if (-not $DbName)     { $DbName     = $env:POSTGRES_DB }
+if (-not $DbUser)     { $DbUser     = $env:POSTGRES_USER }
+if (-not $DbPassword) { $DbPassword = $env:POSTGRES_PASSWORD }
+
+if ([string]::IsNullOrEmpty($DbName) -or [string]::IsNullOrEmpty($DbUser) -or [string]::IsNullOrEmpty($DbPassword)) {
+    Write-Host ""
+    Write-Host "✗ Faltan credenciales de base de datos." -ForegroundColor Red
+    Write-Host "  Define en .env (o como variables de entorno):" -ForegroundColor Yellow
+    Write-Host "    POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD" -ForegroundColor Yellow
+    Write-Host "  Copia .env.example a .env y ajusta los valores." -ForegroundColor Yellow
+    exit 1
+}
 
 Write-Host ""
 Write-Host "=================================================" -ForegroundColor Cyan
@@ -27,7 +63,7 @@ Write-Host "  Tourup — prisma migrate deploy (15 servicios)" -ForegroundColor 
 Write-Host "=================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# ── 1. Verificar Docker / Postgres ────────────────────────────────────────────
+# ── 3. Verificar Docker / Postgres ────────────────────────────────────────────
 Write-Host "➤ Verificando conexión a PostgreSQL..." -ForegroundColor Yellow
 $dockerOk = docker ps 2>$null
 if ($LASTEXITCODE -ne 0) {
@@ -44,7 +80,7 @@ if (-not $pgOk) {
 }
 Write-Host "✓ PostgreSQL disponible" -ForegroundColor Green
 
-# ── 2. Servicios ──────────────────────────────────────────────────────────────
+# ── 4. Servicios ──────────────────────────────────────────────────────────────
 $services = @(
   @{name="identity";      schema="identity"},
   @{name="tenancy";       schema="tenancy"},
@@ -89,7 +125,7 @@ foreach ($svc in $services) {
     }
 }
 
-# ── 3. Resumen ────────────────────────────────────────────────────────────────
+# ── 5. Resumen ────────────────────────────────────────────────────────────────
 Set-Location $Root
 Write-Host ""
 Write-Host "=================================================" -ForegroundColor Cyan

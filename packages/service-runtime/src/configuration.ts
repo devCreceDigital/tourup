@@ -33,6 +33,7 @@ export function assertRuntimeConfiguration(serviceName: string, env: NodeJS.Proc
 
   requireNonEmpty(env, "DATABASE_URL");
   assertSafeSecret(env, "SERVICE_INTERNAL_SECRET");
+  requireNonEmpty(env, "APP_URL");
 
   if (serviceName === "identity" || serviceName === "api-gateway") {
     assertSafeSecret(env, "APP_JWT_SECRET");
