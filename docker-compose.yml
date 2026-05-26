@@ -121,10 +121,18 @@ services:
       APP_JWT_SECRET: ${APP_JWT_SECRET:?APP_JWT_SECRET is required}
       APP_JWT_ISSUER: ${APP_JWT_ISSUER:-totem-hub}
       APP_ENV: ${APP_ENV:-local}
+      APP_URL: ${APP_URL:-http://localhost:3001}
       EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+      # Servicio de notificaciones (emails de verificación y reset de contraseña)
+      NOTIFICATIONS_SERVICE_URL: http://notifications:4111
+      REQUIRE_EMAIL_VERIFICATION: ${REQUIRE_EMAIL_VERIFICATION:-false}
+      OUTBOX_POLL_INTERVAL_MS: ${OUTBOX_POLL_INTERVAL_MS:-5000}
+      OUTBOX_MAX_RETRIES: ${OUTBOX_MAX_RETRIES:-5}
     depends_on:
       postgres:
         condition: service_healthy
+      notifications:
+        condition: service_started
     ports:
       - "4101:4101"
 
@@ -306,6 +314,9 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=notifications
       SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
       EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+      # Email delivery — sin RESEND_API_KEY usa ConsoleEmailPort (solo log)
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@tourup.local}
     depends_on:
       postgres:
         condition: service_healthy

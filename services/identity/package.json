@@ -9,7 +9,7 @@
     "dev": "tsx src/main.ts",
     "start": "node dist/main.js",
     "test": "tsc -p tsconfig.json --noEmit",
-    "test:unit": "node --test --import tsx/esm src/tests/auth-security.test.ts",
+    "test:unit": "node --test --import tsx/esm src/tests/auth-security.test.ts src/tests/auth-flows.test.ts",
     "lint": "tsc -p tsconfig.json --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy"
