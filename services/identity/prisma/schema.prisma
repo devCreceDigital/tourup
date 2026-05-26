@@ -1,0 +1,94 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  runtime             = "nodejs"
+  moduleFormat       = "esm"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["identity"]
+}
+
+model ProfileRecord {
+  id             String   @id @db.Uuid
+  tenantId       String?  @map("tenant_id") @db.Uuid
+  status         String
+  version        Int      @default(1)
+  idempotencyKey String?  @unique @map("idempotency_key")
+  payload        Json
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@schema("identity")
+  @@map("profiles")
+}
+
+model OutboxEvent {
+  id            String   @id @db.Uuid
+  aggregateId   String   @map("aggregate_id") @db.Uuid
+  tenantId      String?  @map("tenant_id") @db.Uuid
+  eventType     String   @map("event_type")
+  payload       Json
+  occurredAt    DateTime @default(now()) @map("occurred_at")
+  processedAt   DateTime? @map("processed_at")
+
+  @@index([tenantId])
+  @@index([processedAt])
+  @@schema("identity")
+  @@map("profiles_outbox")
+}
+
+model InvitationRecord {
+  id             String   @id @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  email          String
+  role           String
+  tokenHash      String   @unique @map("token_hash")
+  idempotencyKey String?  @unique @map("idempotency_key")
+  status         String
+  createdBy      String?  @map("created_by") @db.Uuid
+  expiresAt      DateTime @map("expires_at")
+  acceptedAt     DateTime? @map("accepted_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@schema("identity")
+  @@map("invitations")
+}
+
+model CredentialRecord {
+  userId             String    @id @map("user_id") @db.Uuid
+  email              String    @unique
+  passwordHash       String    @map("password_hash")
+  passwordUpdatedAt  DateTime  @default(now()) @map("password_updated_at")
+  failedLoginCount   Int       @default(0) @map("failed_login_count")
+  lockedUntil        DateTime? @map("locked_until")
+  lastLoginAt        DateTime? @map("last_login_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  @@schema("identity")
+  @@map("credentials")
+}
+
+model RefreshTokenRecord {
+  id         String    @id @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  tenantId   String?   @map("tenant_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash")
+  userAgent  String?   @map("user_agent")
+  ipAddress  String?   @map("ip_address")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([expiresAt])
+  @@schema("identity")
+  @@map("refresh_tokens")
+}

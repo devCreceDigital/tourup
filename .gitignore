@@ -1,0 +1,16 @@
+node_modules/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Build outputs
+dist/
+.next/
+out/
+
+# Logs and local caches
+*.log
+.turbo/
+.pnpm-store/

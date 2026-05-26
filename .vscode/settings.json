@@ -1,0 +1,15 @@
+{
+  "terminal.integrated.sandbox.enabled": false,
+  "remote.autoForwardPorts": true,
+  "remote.autoForwardPortsSource": "hybrid",
+  "remote.forwardedPorts": [3001, 4100],
+  "remote.portsAttributes": {
+    "3001": {
+      "label": "Totem Web (Next.js)",
+      "onAutoForward": "openBrowser"
+    },
+    "4100": {
+      "label": "API Gateway"
+    }
+  }
+}

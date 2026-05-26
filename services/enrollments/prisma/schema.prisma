@@ -1,0 +1,71 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  runtime             = "nodejs"
+  moduleFormat       = "esm"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["enrollments"]
+}
+
+model EnrollmentRecord {
+  id             String   @id @db.Uuid
+  tenantId       String?  @map("tenant_id") @db.Uuid
+  status         String
+  version        Int      @default(1)
+  idempotencyKey String?  @unique @map("idempotency_key")
+  payload        Json
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@schema("enrollments")
+  @@map("enrollments")
+}
+
+model OutboxEvent {
+  id            String   @id @db.Uuid
+  aggregateId   String   @map("aggregate_id") @db.Uuid
+  tenantId      String?  @map("tenant_id") @db.Uuid
+  eventType     String   @map("event_type")
+  payload       Json
+  occurredAt    DateTime @default(now()) @map("occurred_at")
+  processedAt   DateTime? @map("processed_at")
+
+  @@index([tenantId])
+  @@index([processedAt])
+  @@schema("enrollments")
+  @@map("enrollments_outbox")
+}
+
+model EnrollmentNaturalKey {
+  id             String   @id @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  tripId         String   @map("trip_id") @db.Uuid
+  email          String
+  documentNumber String?  @map("document_number")
+  enrollmentId   String   @map("enrollment_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([tenantId, tripId, email, documentNumber])
+  @@index([tenantId, tripId])
+  @@schema("enrollments")
+  @@map("enrollment_natural_keys")
+}
+
+model EnrollmentHealthData {
+  enrollmentId String   @id @map("enrollment_id") @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  allergies    Json
+  medications  Json
+  emergency    Json
+  raw          Json
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@schema("enrollments")
+  @@map("enrollment_health_data")
+}

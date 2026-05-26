@@ -1,0 +1,77 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  runtime             = "nodejs"
+  moduleFormat       = "esm"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["payments"]
+}
+
+model PaymentRecord {
+  id             String   @id @db.Uuid
+  tenantId       String?  @map("tenant_id") @db.Uuid
+  status         String
+  version        Int      @default(1)
+  idempotencyKey String?  @unique @map("idempotency_key")
+  payload        Json
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@schema("payments")
+  @@map("payments")
+}
+
+model OutboxEvent {
+  id            String   @id @db.Uuid
+  aggregateId   String   @map("aggregate_id") @db.Uuid
+  tenantId      String?  @map("tenant_id") @db.Uuid
+  eventType     String   @map("event_type")
+  payload       Json
+  occurredAt    DateTime @default(now()) @map("occurred_at")
+  processedAt   DateTime? @map("processed_at")
+
+  @@index([tenantId])
+  @@index([processedAt])
+  @@schema("payments")
+  @@map("payments_outbox")
+}
+
+model InstallmentRecord {
+  id        String   @id @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  tripId    String   @map("trip_id") @db.Uuid
+  name      String
+  amount    Decimal  @db.Decimal(12, 2)
+  currency  String   @default("PEN")
+  dueDate   DateTime @map("due_date")
+  required  Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId, tripId])
+  @@index([dueDate])
+  @@schema("payments")
+  @@map("installments")
+}
+
+model ProviderPaymentEvent {
+  id          String   @id @db.Uuid
+  tenantId    String?  @map("tenant_id") @db.Uuid
+  provider    String
+  eventId     String   @map("event_id")
+  eventType   String   @map("event_type")
+  payload     Json
+  processedAt DateTime? @map("processed_at")
+  receivedAt  DateTime @default(now()) @map("received_at")
+
+  @@unique([provider, eventId])
+  @@index([tenantId])
+  @@index([processedAt])
+  @@schema("payments")
+  @@map("provider_payment_events")
+}

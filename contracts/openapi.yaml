@@ -1,0 +1,131 @@
+openapi: 3.1.0
+info:
+  title: Totem HUB Microservices API
+  version: 2.0.0
+  description: Contratos publicos para la modernizacion DDD hexagonal por microservicios.
+servers:
+  - url: http://localhost:4100
+    description: API gateway local
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+    CommandResponse:
+      type: object
+      required: [id, status, version, payload]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        status:
+          type: string
+        version:
+          type: integer
+        payload:
+          type: object
+paths:
+  /identity/capability:
+    get:
+      summary: Capability identity
+      responses:
+        "200":
+          description: Service capability
+  /tenancy/capability:
+    get:
+      summary: Capability tenancy
+      responses:
+        "200":
+          description: Service capability
+  /catalog/capability:
+    get:
+      summary: Capability catalog
+      responses:
+        "200":
+          description: Service capability
+  /itineraries/capability:
+    get:
+      summary: Capability itineraries
+      responses:
+        "200":
+          description: Service capability
+  /trips/capability:
+    get:
+      summary: Capability trips
+      responses:
+        "200":
+          description: Service capability
+  /enrollments/capability:
+    get:
+      summary: Capability enrollments
+      responses:
+        "200":
+          description: Service capability
+  /payments/capability:
+    get:
+      summary: Capability payments
+      responses:
+        "200":
+          description: Service capability
+  /subscriptions/capability:
+    get:
+      summary: Capability subscriptions
+      responses:
+        "200":
+          description: Service capability
+  /documents/capability:
+    get:
+      summary: Capability documents
+      responses:
+        "200":
+          description: Service capability
+  /rooming/capability:
+    get:
+      summary: Capability rooming
+      responses:
+        "200":
+          description: Service capability
+  /notifications/capability:
+    get:
+      summary: Capability notifications
+      responses:
+        "200":
+          description: Service capability
+  /assistant/capability:
+    get:
+      summary: Capability assistant
+      responses:
+        "200":
+          description: Service capability
+  /support/capability:
+    get:
+      summary: Capability support
+      responses:
+        "200":
+          description: Service capability
+  /platform/capability:
+    get:
+      summary: Capability platform
+      responses:
+        "200":
+          description: Service capability
+  /audit/capability:
+    get:
+      summary: Capability audit
+      responses:
+        "200":
+          description: Service capability

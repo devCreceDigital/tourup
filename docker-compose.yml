@@ -1,0 +1,400 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ollama-models:
+    image: ollama/ollama:latest
+    profiles:
+      - models
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      ASSISTANT_MODEL: ${ASSISTANT_MODEL:-gemma3:4b}
+      ASSISTANT_CLASSIFIER_MODE: ${ASSISTANT_CLASSIFIER_MODE:-heuristic}
+      ASSISTANT_CLASSIFIER_MODEL: ${ASSISTANT_CLASSIFIER_MODEL:-gemma3:4b}
+      ASSISTANT_EMBEDDING_MODEL: ${ASSISTANT_EMBEDDING_MODEL:-embeddinggemma}
+    depends_on:
+      ollama:
+        condition: service_started
+    entrypoint: ["/bin/sh", "-lc"]
+    command:
+      - |
+        until ollama list >/dev/null 2>&1; do sleep 2; done
+        ollama pull "$ASSISTANT_MODEL"
+        if [ "$ASSISTANT_CLASSIFIER_MODE" = "ollama" ] && [ "$ASSISTANT_CLASSIFIER_MODEL" != "$ASSISTANT_MODEL" ]; then ollama pull "$ASSISTANT_CLASSIFIER_MODEL"; fi
+        ollama pull "$ASSISTANT_EMBEDDING_MODEL"
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: infra/docker/workspace-dev.Dockerfile
+    user: "${HOST_UID:-1001}:${HOST_GID:-1001}"
+    working_dir: /workspace
+    command: pnpm --filter @totem/api-gateway dev
+    volumes:
+      - .:/workspace
+    environment:
+      HOME: /tmp
+      COREPACK_HOME: /tmp/corepack
+      CI: "true"
+      PORT: 4100
+      IDENTITY_URL: http://identity:4101
+      TENANCY_URL: http://tenancy:4102
+      CATALOG_URL: http://catalog:4103
+      ITINERARIES_URL: http://itineraries:4104
+      TRIPS_URL: http://trips:4105
+      ENROLLMENTS_URL: http://enrollments:4106
+      PAYMENTS_URL: http://payments:4107
+      SUBSCRIPTIONS_URL: http://subscriptions:4108
+      DOCUMENTS_URL: http://documents:4109
+      ROOMING_URL: http://rooming:4110
+      NOTIFICATIONS_URL: http://notifications:4111
+      ASSISTANT_URL: http://assistant:4112
+      SUPPORT_URL: http://support:4113
+      PLATFORM_URL: http://platform:4114
+      AUDIT_URL: http://audit:4115
+      SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      APP_JWT_SECRET: ${APP_JWT_SECRET:?APP_JWT_SECRET is required}
+      APP_JWT_ISSUER: ${APP_JWT_ISSUER:-totem-hub}
+      APP_ENV: ${APP_ENV:-local}
+      EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+    ports:
+      - "4100:4100"
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/workspace-dev.Dockerfile
+    user: "${HOST_UID:-1001}:${HOST_GID:-1001}"
+    working_dir: /workspace
+    command: pnpm --filter @totem/web dev
+    volumes:
+      - .:/workspace
+    environment:
+      HOME: /tmp
+      COREPACK_HOME: /tmp/corepack
+      CI: "true"
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4100}
+      NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
+      NEXT_PUBLIC_USE_MOCK_API: ${NEXT_PUBLIC_USE_MOCK_API:-false}
+    depends_on:
+      - api-gateway
+    ports:
+      - "3001:3001"
+
+  identity:
+    build:
+      context: .
+      dockerfile: infra/docker/service.Dockerfile
+    working_dir: /workspace/services/identity
+    command: pnpm dev
+    environment:
+      COREPACK_HOME: /tmp/corepack
+      PORT: 4101
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=identity
+      SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      APP_JWT_SECRET: ${APP_JWT_SECRET:?APP_JWT_SECRET is required}
+      APP_JWT_ISSUER: ${APP_JWT_ISSUER:-totem-hub}
+      APP_ENV: ${APP_ENV:-local}
+      EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4101:4101"
+
+  tenancy:
+    build:
+      context: .
+      dockerfile: infra/docker/service.Dockerfile
+    working_dir: /workspace/services/tenancy
+    command: pnpm dev
+    environment:
+      COREPACK_HOME: /tmp/corepack
+      PORT: 4102
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=tenancy
+      SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      APP_ENV: ${APP_ENV:-local}
+      EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4102:4102"
+
+  catalog:
+    build:
+      context: .
+      dockerfile: infra/docker/service.Dockerfile
+    working_dir: /workspace/services/catalog
+    command: pnpm dev
+    environment:
+      COREPACK_HOME: /tmp/corepack
+      PORT: 4103
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=catalog
+      SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4103:4103"
+
+  itineraries:
+    build:
+      context: .
+      dockerfile: infra/docker/service.Dockerfile
+    working_dir: /workspace/services/itineraries
+    command: pnpm dev
+    environment:
+      COREPACK_HOME: /tmp/corepack
+      PORT: 4104
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=itineraries
+      SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4104:4104"
+
+  trips:
+    build:
+      context: .
+      dockerfile: infra/docker/service.Dockerfile
+    working_dir: /workspace/services/trips
+    command: pnpm dev
+    environment:
+      COREPACK_HOME: /tmp/corepack
+      PORT: 4105
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=trips
+      SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+      SUBSCRIPTIONS_SERVICE_URL: http://subscriptions:4108
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4105:4105"
+
+  enrollments:
+    build:
+      context: .
+      dockerfile: infra/docker/service.Dockerfile
+    working_dir: /workspace/services/enrollments
+    command: pnpm dev
+    environment:
+      COREPACK_HOME: /tmp/corepack
+      PORT: 4106
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=enrollments
+      SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+      SUBSCRIPTIONS_SERVICE_URL: http://subscriptions:4108
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4106:4106"
+
+  payments:
+    build:
+      context: .
+      dockerfile: infra/docker/service.Dockerfile
+    working_dir: /workspace/services/payments
+    command: pnpm dev
+    environment:
+      COREPACK_HOME: /tmp/corepack
+      PORT: 4107
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=payments
+      SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4107:4107"
+
+  subscriptions:
+    build:
+      context: .
+      dockerfile: infra/docker/service.Dockerfile
+    working_dir: /workspace/services/subscriptions
+    command: pnpm dev
+    environment:
+      COREPACK_HOME: /tmp/corepack
+      PORT: 4108
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=subscriptions
+      SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+      BILLING_PROVIDER_URL: http://platform:4114/platform/billing-provider
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4108:4108"
+
+  documents:
+    build:
+      context: .
+      dockerfile: infra/docker/service.Dockerfile
+    working_dir: /workspace/services/documents
+    command: pnpm dev
+    environment:
+      COREPACK_HOME: /tmp/corepack
+      PORT: 4109
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=documents
+      SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4109:4109"
+
+  rooming:
+    build:
+      context: .
+      dockerfile: infra/docker/service.Dockerfile
+    working_dir: /workspace/services/rooming
+    command: pnpm dev
+    environment:
+      COREPACK_HOME: /tmp/corepack
+      PORT: 4110
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=rooming
+      SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4110:4110"
+
+  notifications:
+    build:
+      context: .
+      dockerfile: infra/docker/service.Dockerfile
+    working_dir: /workspace/services/notifications
+    command: pnpm dev
+    environment:
+      COREPACK_HOME: /tmp/corepack
+      PORT: 4111
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=notifications
+      SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4111:4111"
+
+  assistant:
+    build:
+      context: .
+      dockerfile: infra/docker/service.Dockerfile
+    working_dir: /workspace/services/assistant
+    command: pnpm dev
+    environment:
+      COREPACK_HOME: /tmp/corepack
+      PORT: 4112
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=assistant
+      SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      APP_ENV: ${APP_ENV:-local}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-10m}
+      ASSISTANT_MODEL: ${ASSISTANT_MODEL:-gemma3:4b}
+      ASSISTANT_MAX_TOKENS: ${ASSISTANT_MAX_TOKENS:-360}
+      ASSISTANT_CLASSIFIER_MODE: ${ASSISTANT_CLASSIFIER_MODE:-heuristic}
+      ASSISTANT_CLASSIFIER_MODEL: ${ASSISTANT_CLASSIFIER_MODEL:-gemma3:4b}
+      ASSISTANT_EMBEDDING_MODEL: ${ASSISTANT_EMBEDDING_MODEL:-embeddinggemma}
+      ASSISTANT_DEFAULT_TENANT_ID: ${ASSISTANT_DEFAULT_TENANT_ID:-2dceea5b-1628-4261-b831-56af952b4348}
+      EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    ports:
+      - "4112:4112"
+
+  support:
+    build:
+      context: .
+      dockerfile: infra/docker/service.Dockerfile
+    working_dir: /workspace/services/support
+    command: pnpm dev
+    environment:
+      COREPACK_HOME: /tmp/corepack
+      PORT: 4113
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=support
+      SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4113:4113"
+
+  platform:
+    build:
+      context: .
+      dockerfile: infra/docker/service.Dockerfile
+    working_dir: /workspace/services/platform
+    command: pnpm dev
+    environment:
+      COREPACK_HOME: /tmp/corepack
+      PORT: 4114
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=platform
+      SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4114:4114"
+
+  audit:
+    build:
+      context: .
+      dockerfile: infra/docker/service.Dockerfile
+    working_dir: /workspace/services/audit
+    command: pnpm dev
+    environment:
+      COREPACK_HOME: /tmp/corepack
+      PORT: 4115
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=audit
+      SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      EVENT_BUS_URL: http://platform:4114/platform/events/ingest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4115:4115"
+
+volumes:
+  postgres_data:
+  ollama_data:

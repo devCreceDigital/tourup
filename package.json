@@ -1,0 +1,31 @@
+{
+  "name": "totem-hub",
+  "version": "2.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.3.0",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "dev:web": "pnpm --filter @totem/web dev",
+    "dev:gateway": "pnpm --filter @totem/api-gateway dev",
+    "dev:services": "pnpm --filter './services/*' --parallel dev",
+    "prisma:generate": "pnpm --filter './services/*' prisma:generate",
+    "prisma:migrate": "pnpm --filter './services/*' prisma:migrate",
+    "verify:architecture": "node tools/verify-architecture.mjs",
+    "verify:migration": "python3 tools/verify_migration_coverage.py"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=11.3.0"
+  }
+}

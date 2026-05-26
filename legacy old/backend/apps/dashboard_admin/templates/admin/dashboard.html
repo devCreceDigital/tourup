@@ -1,0 +1,166 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content_title %}<h1>Dashboard</h1>{% endblock %}
+
+{% block content %}
+<style>
+  .dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .dash-card { background: #2a2a2a; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 6px; border-left: 4px solid var(--card-color, #3b82f6); }
+  .dash-card .icon { font-size: 28px; }
+  .dash-card .value { font-size: 32px; font-weight: 700; color: #fff; }
+  .dash-card .label { font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
+  .dash-card .sub { font-size: 12px; color: #888; }
+  .section-title { font-size: 16px; font-weight: 600; color: #ddd; margin: 24px 0 12px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+  .recent-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .recent-table th { text-align: left; padding: 8px 12px; background: #2a2a2a; color: #aaa; font-weight: 600; font-size: 11px; text-transform: uppercase; }
+  .recent-table td { padding: 8px 12px; border-bottom: 1px solid #1a1a1a; color: #ddd; }
+  .recent-table tr:hover td { background: #2a2a2a; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .badge-green  { background: #16a34a; color: white; }
+  .badge-orange { background: #d97706; color: white; }
+  .badge-blue   { background: #2563eb; color: white; }
+  .badge-gray   { background: #4b5563; color: white; }
+  .badge-red    { background: #dc2626; color: white; }
+  .tables-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 900px) { .tables-grid { grid-template-columns: 1fr; } }
+</style>
+
+<!-- KPI Cards -->
+<p class="section-title"><i class="fas fa-chart-bar"></i> &nbsp;Resumen del sistema</p>
+<div class="dash-grid">
+  <div class="dash-card" style="--card-color: #3b82f6;">
+    <span class="icon">🏢</span>
+    <span class="value">{{ stats.tenants_total }}</span>
+    <span class="label">Agencias registradas</span>
+    <span class="sub">{{ stats.tenants_activos }} activas</span>
+  </div>
+  <div class="dash-card" style="--card-color: #8b5cf6;">
+    <span class="icon">📦</span>
+    <span class="value">{{ stats.planes_total }}</span>
+    <span class="label">Planes de suscripción</span>
+  </div>
+  <div class="dash-card" style="--card-color: #06b6d4;">
+    <span class="icon">👤</span>
+    <span class="value">{{ stats.usuarios_total }}</span>
+    <span class="label">Usuarios / Perfiles</span>
+    <span class="sub">{{ stats.admins_total }} admins</span>
+  </div>
+  <div class="dash-card" style="--card-color: #10b981;">
+    <span class="icon">✈️</span>
+    <span class="value">{{ stats.viajes_total }}</span>
+    <span class="label">Viajes</span>
+    <span class="sub">{{ stats.viajes_publicados }} publicados · {{ stats.viajes_borrador }} borradores</span>
+  </div>
+  <div class="dash-card" style="--card-color: #f59e0b;">
+    <span class="icon">🗺️</span>
+    <span class="value">{{ stats.itinerarios_total }}</span>
+    <span class="label">Itinerarios</span>
+  </div>
+  <div class="dash-card" style="--card-color: #ec4899;">
+    <span class="icon">📋</span>
+    <span class="value">{{ stats.inscrip_total }}</span>
+    <span class="label">Inscripciones</span>
+    <span class="sub">{{ stats.inscrip_confirm }} confirmadas</span>
+  </div>
+  <div class="dash-card" style="--card-color: #22c55e;">
+    <span class="icon">💰</span>
+    <span class="value">{{ stats.pagos_total }}</span>
+    <span class="label">Pagos registrados</span>
+    <span class="sub">{{ stats.pagos_verificados }} verificados</span>
+  </div>
+</div>
+
+<!-- Últimas actividades -->
+<div class="tables-grid">
+
+  <!-- Viajes recientes -->
+  <div>
+    <p class="section-title"><i class="fas fa-plane"></i> &nbsp;Últimos viajes</p>
+    <table class="recent-table">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Estado</th>
+          <th>Fecha inicio</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in viajes_recientes %}
+        <tr>
+          <td><a href="/admin/viajes/viaje/{{ v.id }}/change/" style="color:#60a5fa">{{ v.nombre }}</a></td>
+          <td>
+            {% if v.estado == "publicado" %}<span class="badge badge-green">{{ v.estado }}</span>
+            {% elif v.estado == "borrador" %}<span class="badge badge-gray">{{ v.estado }}</span>
+            {% elif v.estado == "confirmado" %}<span class="badge badge-blue">{{ v.estado }}</span>
+            {% elif v.estado == "cancelado" %}<span class="badge badge-red">{{ v.estado }}</span>
+            {% else %}<span class="badge badge-orange">{{ v.estado }}</span>{% endif %}
+          </td>
+          <td>{{ v.fecha_inicio|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" style="color:#666;text-align:center;padding:20px">Sin datos</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagos recientes -->
+  <div>
+    <p class="section-title"><i class="fas fa-money-bill-wave"></i> &nbsp;Últimos pagos</p>
+    <table class="recent-table">
+      <thead>
+        <tr>
+          <th>Monto</th>
+          <th>Método</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in pagos_recientes %}
+        <tr>
+          <td style="font-weight:600">S/ {{ p.monto }}</td>
+          <td>{{ p.metodo }}</td>
+          <td>
+            {% if p.estado == "verificado" %}<span class="badge badge-green">{{ p.estado }}</span>
+            {% elif p.estado == "rechazado" %}<span class="badge badge-red">{{ p.estado }}</span>
+            {% else %}<span class="badge badge-orange">{{ p.estado }}</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" style="color:#666;text-align:center;padding:20px">Sin datos</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Inscripciones recientes -->
+<p class="section-title"><i class="fas fa-clipboard-check"></i> &nbsp;Últimas inscripciones</p>
+<table class="recent-table">
+  <thead>
+    <tr>
+      <th>Viajero</th>
+      <th>Viaje</th>
+      <th>Estado</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for i in inscrip_recientes %}
+    <tr>
+      <td>{{ i.viajero.nombre|default:"—" }}</td>
+      <td>{{ i.viaje.nombre|default:"—" }}</td>
+      <td>
+        {% if i.estado == "confirmado" %}<span class="badge badge-green">{{ i.estado }}</span>
+        {% elif i.estado == "cancelado" %}<span class="badge badge-red">{{ i.estado }}</span>
+        {% elif i.estado == "pendiente_pago" %}<span class="badge badge-orange">{{ i.estado }}</span>
+        {% else %}<span class="badge badge-gray">{{ i.estado }}</span>{% endif %}
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="3" style="color:#666;text-align:center;padding:20px">Sin datos</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
