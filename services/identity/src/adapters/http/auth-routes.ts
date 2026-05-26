@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { SignJWT } from "jose";
-import { ForbiddenError, NotFoundError, UnauthorizedError, parseEntityId, parseTenantId, toJsonObject } from "@totem/shared-kernel";
+import { ForbiddenError, NotFoundError, UnauthorizedError, emailSchema, nonEmptyString, parseEntityId, parseTenantId, toJsonObject, uuidSchema, validate, z } from "@totem/shared-kernel";
 import type { Route } from "@totem/service-runtime";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import type { Profile, ProfileRole } from "../../domain/profile.js";
@@ -13,32 +13,63 @@ import {
   verifyPassword
 } from "../../domain/password.js";
 
-function record(value: unknown): Record<string, unknown> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error("Request body must be an object.");
-  return value as Record<string, unknown>;
-}
+// hashPassword y verifyPassword vienen de ../../domain/password.js
 
-function text(body: Record<string, unknown>, key: string): string {
-  const value = body[key];
-  if (typeof value !== "string" || value.trim().length === 0) throw new Error(`${key} is required.`);
-  return value.trim();
-}
+// ─── Schemas de validación Zod ────────────────────────────────────────────────
 
-function optionalText(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
+/** Contraseña: mínimo 8 caracteres, no vacía */
+const passwordSchema = nonEmptyString("password").min(8, { message: "Password must have at least 8 characters." });
 
-function normalizeEmail(value: string): string {
-  return value.trim().toLowerCase();
-}
+/** Token opaco (base64url) */
+const tokenSchema = nonEmptyString("token");
 
-function role(value: unknown): ProfileRole {
+/**
+ * Normaliza el campo role/rol/tipoCuenta al tipo ProfileRole del dominio.
+ * "usuario" → "viajero" (alias legacy). "superadmin" solo vía admin.
+ */
+function normalizeRole(value: string | null | undefined): ProfileRole {
   if (value === "superadmin" || value === "admin" || value === "viajero") return value;
   if (value === "usuario") return "viajero";
   return "viajero";
 }
 
-// hashPassword y verifyPassword vienen de ../../domain/password.js
+const registerBodySchema = z.object({
+  email: emailSchema,
+  password: passwordSchema,
+  name: nonEmptyString("name"),
+  // Tres nombres legacy para el mismo campo
+  role: z.string().optional(),
+  rol: z.string().optional(),
+  tipoCuenta: z.string().optional(),
+  tenantId: uuidSchema.optional().nullable(),
+  tenant_id: uuidSchema.optional().nullable()
+});
+
+const loginBodySchema = z.object({
+  email: emailSchema,
+  password: nonEmptyString("password")
+});
+
+const refreshBodySchema = z.object({
+  refreshToken: nonEmptyString("refreshToken")
+});
+
+const forgotPasswordBodySchema = z.object({
+  email: emailSchema
+});
+
+const resetPasswordBodySchema = z.object({
+  token: tokenSchema,
+  password: passwordSchema
+});
+
+const verifyEmailBodySchema = z.object({
+  token: tokenSchema
+});
+
+const resendVerificationBodySchema = z.object({
+  email: emailSchema
+});
 
 function jwtSecret(): Uint8Array {
   const secret = process.env.APP_JWT_SECRET;
@@ -177,17 +208,17 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
       method: "POST",
       path: "/identity/auth/register",
       handler: async (request) => {
-        const body = record(request.body);
-        const email = normalizeEmail(text(body, "email"));
-        const password = text(body, "password");
-        const accountRole = role(body.role ?? body.rol ?? body.tipoCuenta);
+        const body = validate(registerBodySchema, request.body);
+        const email = body.email; // ya normalizado (trim + lowercase) por emailSchema
+        const password = body.password;
+        const accountRole = normalizeRole(body.role ?? body.rol ?? body.tipoCuenta);
         if (accountRole === "superadmin") throw new Error("Superadmin accounts cannot be self-registered.");
-        const tenantId = optionalText(body.tenantId ?? body.tenant_id);
+        const rawTenantId = body.tenantId ?? body.tenant_id ?? null;
         const profile: Profile = {
           id: parseEntityId(randomUUID()),
-          tenantId: tenantId === null ? null : parseTenantId(tenantId),
+          tenantId: rawTenantId === null ? null : parseTenantId(rawTenantId),
           email,
-          name: text(body, "name"),
+          name: body.name,
           role: accountRole,
           isActive: true
         };
@@ -258,9 +289,7 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
       method: "POST",
       path: "/identity/auth/login",
       handler: async (request) => {
-        const body = record(request.body);
-        const email = normalizeEmail(text(body, "email"));
-        const password = text(body, "password");
+        const { email, password } = validate(loginBodySchema, request.body);
         const credential = await prisma.credentialRecord.findUnique({ where: { email } });
         if (credential === null || (credential.lockedUntil !== null && credential.lockedUntil > new Date())) {
           throw new UnauthorizedError("Invalid credentials.");
@@ -306,8 +335,7 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
       method: "POST",
       path: "/identity/auth/refresh",
       handler: async (request) => {
-        const body = record(request.body);
-        const refreshToken = text(body, "refreshToken");
+        const { refreshToken } = validate(refreshBodySchema, request.body);
         const stored = await prisma.refreshTokenRecord.findUnique({ where: { tokenHash: hashRefreshToken(refreshToken) } });
         if (stored === null || stored.revokedAt !== null || stored.expiresAt <= new Date()) {
           throw new UnauthorizedError("Invalid refresh token.");
@@ -338,7 +366,7 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
       path: "/identity/auth/me",
       handler: async (request) => {
         if (request.context.userEmail === null) throw new UnauthorizedError("Authenticated user email is required.");
-        const profileRecord = await findProfileRecordByEmail(prisma, normalizeEmail(request.context.userEmail));
+        const profileRecord = await findProfileRecordByEmail(prisma, request.context.userEmail.trim().toLowerCase());
         if (profileRecord === null) throw new NotFoundError("Profile not found.");
         const profile = profileRecord.payload as Profile;
         return {
@@ -353,8 +381,7 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
       method: "POST",
       path: "/identity/auth/forgot-password",
       handler: async (request) => {
-        const body = record(request.body);
-        const email = normalizeEmail(text(body, "email"));
+        const { email } = validate(forgotPasswordBodySchema, request.body);
 
         // Comprobamos que la cuenta existe; si no, respondemos igual (no revelar existencia)
         const credential = await prisma.credentialRecord.findUnique({ where: { email } });
@@ -394,10 +421,7 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
       method: "POST",
       path: "/identity/auth/reset-password",
       handler: async (request) => {
-        const body = record(request.body);
-        const rawToken  = text(body, "token");
-        const newPassword = text(body, "password");
-
+        const { token: rawToken, password: newPassword } = validate(resetPasswordBodySchema, request.body);
         const tokenHash = createHash("sha256").update(rawToken, "utf-8").digest("hex");
         const resetRecord = await prisma.passwordResetTokenRecord.findUnique({ where: { tokenHash } });
 
@@ -438,9 +462,7 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
       method: "POST",
       path: "/identity/auth/verify-email",
       handler: async (request) => {
-        const body = record(request.body);
-        const rawToken = text(body, "token");
-
+        const { token: rawToken } = validate(verifyEmailBodySchema, request.body);
         const tokenHash = createHash("sha256").update(rawToken, "utf-8").digest("hex");
         const verRecord = await prisma.emailVerificationRecord.findUnique({ where: { tokenHash } });
 
@@ -471,8 +493,7 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
       method: "POST",
       path: "/identity/auth/resend-verification",
       handler: async (request) => {
-        const body = record(request.body);
-        const email = normalizeEmail(text(body, "email"));
+        const { email } = validate(resendVerificationBodySchema, request.body);
 
         const profileRecord = await prisma.profileRecord.findFirst({
           where: { payload: { path: ["email"], equals: email }, emailVerifiedAt: null }
