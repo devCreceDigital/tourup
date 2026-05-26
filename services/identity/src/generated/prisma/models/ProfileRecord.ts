@@ -40,6 +40,7 @@ export type ProfileRecordMinAggregateOutputType = {
   status: string | null
   version: number | null
   idempotencyKey: string | null
+  emailVerifiedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -50,6 +51,7 @@ export type ProfileRecordMaxAggregateOutputType = {
   status: string | null
   version: number | null
   idempotencyKey: string | null
+  emailVerifiedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -60,6 +62,7 @@ export type ProfileRecordCountAggregateOutputType = {
   status: number
   version: number
   idempotencyKey: number
+  emailVerifiedAt: number
   payload: number
   createdAt: number
   updatedAt: number
@@ -81,6 +84,7 @@ export type ProfileRecordMinAggregateInputType = {
   status?: true
   version?: true
   idempotencyKey?: true
+  emailVerifiedAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -91,6 +95,7 @@ export type ProfileRecordMaxAggregateInputType = {
   status?: true
   version?: true
   idempotencyKey?: true
+  emailVerifiedAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -101,6 +106,7 @@ export type ProfileRecordCountAggregateInputType = {
   status?: true
   version?: true
   idempotencyKey?: true
+  emailVerifiedAt?: true
   payload?: true
   createdAt?: true
   updatedAt?: true
@@ -199,6 +205,7 @@ export type ProfileRecordGroupByOutputType = {
   status: string
   version: number
   idempotencyKey: string | null
+  emailVerifiedAt: Date | null
   payload: runtime.JsonValue
   createdAt: Date
   updatedAt: Date
@@ -233,6 +240,7 @@ export type ProfileRecordWhereInput = {
   status?: Prisma.StringFilter<"ProfileRecord"> | string
   version?: Prisma.IntFilter<"ProfileRecord"> | number
   idempotencyKey?: Prisma.StringNullableFilter<"ProfileRecord"> | string | null
+  emailVerifiedAt?: Prisma.DateTimeNullableFilter<"ProfileRecord"> | Date | string | null
   payload?: Prisma.JsonFilter<"ProfileRecord">
   createdAt?: Prisma.DateTimeFilter<"ProfileRecord"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ProfileRecord"> | Date | string
@@ -244,6 +252,7 @@ export type ProfileRecordOrderByWithRelationInput = {
   status?: Prisma.SortOrder
   version?: Prisma.SortOrder
   idempotencyKey?: Prisma.SortOrderInput | Prisma.SortOrder
+  emailVerifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   payload?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -258,6 +267,7 @@ export type ProfileRecordWhereUniqueInput = Prisma.AtLeast<{
   tenantId?: Prisma.UuidNullableFilter<"ProfileRecord"> | string | null
   status?: Prisma.StringFilter<"ProfileRecord"> | string
   version?: Prisma.IntFilter<"ProfileRecord"> | number
+  emailVerifiedAt?: Prisma.DateTimeNullableFilter<"ProfileRecord"> | Date | string | null
   payload?: Prisma.JsonFilter<"ProfileRecord">
   createdAt?: Prisma.DateTimeFilter<"ProfileRecord"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ProfileRecord"> | Date | string
@@ -269,6 +279,7 @@ export type ProfileRecordOrderByWithAggregationInput = {
   status?: Prisma.SortOrder
   version?: Prisma.SortOrder
   idempotencyKey?: Prisma.SortOrderInput | Prisma.SortOrder
+  emailVerifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   payload?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -288,6 +299,7 @@ export type ProfileRecordScalarWhereWithAggregatesInput = {
   status?: Prisma.StringWithAggregatesFilter<"ProfileRecord"> | string
   version?: Prisma.IntWithAggregatesFilter<"ProfileRecord"> | number
   idempotencyKey?: Prisma.StringNullableWithAggregatesFilter<"ProfileRecord"> | string | null
+  emailVerifiedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ProfileRecord"> | Date | string | null
   payload?: Prisma.JsonWithAggregatesFilter<"ProfileRecord">
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ProfileRecord"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"ProfileRecord"> | Date | string
@@ -299,6 +311,7 @@ export type ProfileRecordCreateInput = {
   status: string
   version?: number
   idempotencyKey?: string | null
+  emailVerifiedAt?: Date | string | null
   payload: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -310,6 +323,7 @@ export type ProfileRecordUncheckedCreateInput = {
   status: string
   version?: number
   idempotencyKey?: string | null
+  emailVerifiedAt?: Date | string | null
   payload: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -321,6 +335,7 @@ export type ProfileRecordUpdateInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   version?: Prisma.IntFieldUpdateOperationsInput | number
   idempotencyKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payload?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -332,6 +347,7 @@ export type ProfileRecordUncheckedUpdateInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   version?: Prisma.IntFieldUpdateOperationsInput | number
   idempotencyKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payload?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -343,6 +359,7 @@ export type ProfileRecordCreateManyInput = {
   status: string
   version?: number
   idempotencyKey?: string | null
+  emailVerifiedAt?: Date | string | null
   payload: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -354,6 +371,7 @@ export type ProfileRecordUpdateManyMutationInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   version?: Prisma.IntFieldUpdateOperationsInput | number
   idempotencyKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payload?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -365,6 +383,7 @@ export type ProfileRecordUncheckedUpdateManyInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   version?: Prisma.IntFieldUpdateOperationsInput | number
   idempotencyKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payload?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -376,6 +395,7 @@ export type ProfileRecordCountOrderByAggregateInput = {
   status?: Prisma.SortOrder
   version?: Prisma.SortOrder
   idempotencyKey?: Prisma.SortOrder
+  emailVerifiedAt?: Prisma.SortOrder
   payload?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -391,6 +411,7 @@ export type ProfileRecordMaxOrderByAggregateInput = {
   status?: Prisma.SortOrder
   version?: Prisma.SortOrder
   idempotencyKey?: Prisma.SortOrder
+  emailVerifiedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -401,6 +422,7 @@ export type ProfileRecordMinOrderByAggregateInput = {
   status?: Prisma.SortOrder
   version?: Prisma.SortOrder
   idempotencyKey?: Prisma.SortOrder
+  emailVerifiedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -425,6 +447,10 @@ export type IntFieldUpdateOperationsInput = {
   divide?: number
 }
 
+export type NullableDateTimeFieldUpdateOperationsInput = {
+  set?: Date | string | null
+}
+
 export type DateTimeFieldUpdateOperationsInput = {
   set?: Date | string
 }
@@ -437,6 +463,7 @@ export type ProfileRecordSelect<ExtArgs extends runtime.Types.Extensions.Interna
   status?: boolean
   version?: boolean
   idempotencyKey?: boolean
+  emailVerifiedAt?: boolean
   payload?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -448,6 +475,7 @@ export type ProfileRecordSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   status?: boolean
   version?: boolean
   idempotencyKey?: boolean
+  emailVerifiedAt?: boolean
   payload?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -459,6 +487,7 @@ export type ProfileRecordSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   status?: boolean
   version?: boolean
   idempotencyKey?: boolean
+  emailVerifiedAt?: boolean
   payload?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -470,12 +499,13 @@ export type ProfileRecordSelectScalar = {
   status?: boolean
   version?: boolean
   idempotencyKey?: boolean
+  emailVerifiedAt?: boolean
   payload?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ProfileRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "tenantId" | "status" | "version" | "idempotencyKey" | "payload" | "createdAt" | "updatedAt", ExtArgs["result"]["profileRecord"]>
+export type ProfileRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "tenantId" | "status" | "version" | "idempotencyKey" | "emailVerifiedAt" | "payload" | "createdAt" | "updatedAt", ExtArgs["result"]["profileRecord"]>
 
 export type $ProfileRecordPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ProfileRecord"
@@ -486,6 +516,7 @@ export type $ProfileRecordPayload<ExtArgs extends runtime.Types.Extensions.Inter
     status: string
     version: number
     idempotencyKey: string | null
+    emailVerifiedAt: Date | null
     payload: runtime.JsonValue
     createdAt: Date
     updatedAt: Date
@@ -917,6 +948,7 @@ export interface ProfileRecordFieldRefs {
   readonly status: Prisma.FieldRef<"ProfileRecord", 'String'>
   readonly version: Prisma.FieldRef<"ProfileRecord", 'Int'>
   readonly idempotencyKey: Prisma.FieldRef<"ProfileRecord", 'String'>
+  readonly emailVerifiedAt: Prisma.FieldRef<"ProfileRecord", 'DateTime'>
   readonly payload: Prisma.FieldRef<"ProfileRecord", 'Json'>
   readonly createdAt: Prisma.FieldRef<"ProfileRecord", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"ProfileRecord", 'DateTime'>

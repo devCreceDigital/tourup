@@ -9,8 +9,10 @@
  * 🟢 You can import this file directly.
  */
 export type * from './models/ProfileRecord.ts'
+export type * from './models/EmailVerificationRecord.ts'
 export type * from './models/OutboxEvent.ts'
 export type * from './models/InvitationRecord.ts'
 export type * from './models/CredentialRecord.ts'
 export type * from './models/RefreshTokenRecord.ts'
+export type * from './models/PasswordResetTokenRecord.ts'
 export type * from './commonInputTypes.ts'

@@ -23,6 +23,11 @@ export * from './enums.ts';
  */
 export type ProfileRecord = Prisma.ProfileRecordModel
 /**
+ * Model EmailVerificationRecord
+ * 
+ */
+export type EmailVerificationRecord = Prisma.EmailVerificationRecordModel
+/**
  * Model OutboxEvent
  * 
  */
@@ -42,3 +47,8 @@ export type CredentialRecord = Prisma.CredentialRecordModel
  * 
  */
 export type RefreshTokenRecord = Prisma.RefreshTokenRecordModel
+/**
+ * Model PasswordResetTokenRecord
+ * 
+ */
+export type PasswordResetTokenRecord = Prisma.PasswordResetTokenRecordModel

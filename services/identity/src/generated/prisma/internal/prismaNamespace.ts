@@ -385,10 +385,12 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   ProfileRecord: 'ProfileRecord',
+  EmailVerificationRecord: 'EmailVerificationRecord',
   OutboxEvent: 'OutboxEvent',
   InvitationRecord: 'InvitationRecord',
   CredentialRecord: 'CredentialRecord',
-  RefreshTokenRecord: 'RefreshTokenRecord'
+  RefreshTokenRecord: 'RefreshTokenRecord',
+  PasswordResetTokenRecord: 'PasswordResetTokenRecord'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -404,7 +406,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "profileRecord" | "outboxEvent" | "invitationRecord" | "credentialRecord" | "refreshTokenRecord"
+    modelProps: "profileRecord" | "emailVerificationRecord" | "outboxEvent" | "invitationRecord" | "credentialRecord" | "refreshTokenRecord" | "passwordResetTokenRecord"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -479,6 +481,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ProfileRecordCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ProfileRecordCountAggregateOutputType> | number
+        }
+      }
+    }
+    EmailVerificationRecord: {
+      payload: Prisma.$EmailVerificationRecordPayload<ExtArgs>
+      fields: Prisma.EmailVerificationRecordFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.EmailVerificationRecordFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailVerificationRecordPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.EmailVerificationRecordFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailVerificationRecordPayload>
+        }
+        findFirst: {
+          args: Prisma.EmailVerificationRecordFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailVerificationRecordPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.EmailVerificationRecordFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailVerificationRecordPayload>
+        }
+        findMany: {
+          args: Prisma.EmailVerificationRecordFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailVerificationRecordPayload>[]
+        }
+        create: {
+          args: Prisma.EmailVerificationRecordCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailVerificationRecordPayload>
+        }
+        createMany: {
+          args: Prisma.EmailVerificationRecordCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.EmailVerificationRecordCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailVerificationRecordPayload>[]
+        }
+        delete: {
+          args: Prisma.EmailVerificationRecordDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailVerificationRecordPayload>
+        }
+        update: {
+          args: Prisma.EmailVerificationRecordUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailVerificationRecordPayload>
+        }
+        deleteMany: {
+          args: Prisma.EmailVerificationRecordDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.EmailVerificationRecordUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.EmailVerificationRecordUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailVerificationRecordPayload>[]
+        }
+        upsert: {
+          args: Prisma.EmailVerificationRecordUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailVerificationRecordPayload>
+        }
+        aggregate: {
+          args: Prisma.EmailVerificationRecordAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateEmailVerificationRecord>
+        }
+        groupBy: {
+          args: Prisma.EmailVerificationRecordGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EmailVerificationRecordGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.EmailVerificationRecordCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EmailVerificationRecordCountAggregateOutputType> | number
         }
       }
     }
@@ -778,6 +854,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    PasswordResetTokenRecord: {
+      payload: Prisma.$PasswordResetTokenRecordPayload<ExtArgs>
+      fields: Prisma.PasswordResetTokenRecordFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PasswordResetTokenRecordFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenRecordPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PasswordResetTokenRecordFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenRecordPayload>
+        }
+        findFirst: {
+          args: Prisma.PasswordResetTokenRecordFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenRecordPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PasswordResetTokenRecordFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenRecordPayload>
+        }
+        findMany: {
+          args: Prisma.PasswordResetTokenRecordFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenRecordPayload>[]
+        }
+        create: {
+          args: Prisma.PasswordResetTokenRecordCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenRecordPayload>
+        }
+        createMany: {
+          args: Prisma.PasswordResetTokenRecordCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PasswordResetTokenRecordCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenRecordPayload>[]
+        }
+        delete: {
+          args: Prisma.PasswordResetTokenRecordDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenRecordPayload>
+        }
+        update: {
+          args: Prisma.PasswordResetTokenRecordUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenRecordPayload>
+        }
+        deleteMany: {
+          args: Prisma.PasswordResetTokenRecordDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PasswordResetTokenRecordUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PasswordResetTokenRecordUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenRecordPayload>[]
+        }
+        upsert: {
+          args: Prisma.PasswordResetTokenRecordUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenRecordPayload>
+        }
+        aggregate: {
+          args: Prisma.PasswordResetTokenRecordAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePasswordResetTokenRecord>
+        }
+        groupBy: {
+          args: Prisma.PasswordResetTokenRecordGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PasswordResetTokenRecordGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PasswordResetTokenRecordCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PasswordResetTokenRecordCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -823,12 +973,25 @@ export const ProfileRecordScalarFieldEnum = {
   status: 'status',
   version: 'version',
   idempotencyKey: 'idempotencyKey',
+  emailVerifiedAt: 'emailVerifiedAt',
   payload: 'payload',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type ProfileRecordScalarFieldEnum = (typeof ProfileRecordScalarFieldEnum)[keyof typeof ProfileRecordScalarFieldEnum]
+
+
+export const EmailVerificationRecordScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  usedAt: 'usedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type EmailVerificationRecordScalarFieldEnum = (typeof EmailVerificationRecordScalarFieldEnum)[keyof typeof EmailVerificationRecordScalarFieldEnum]
 
 
 export const OutboxEventScalarFieldEnum = {
@@ -838,7 +1001,10 @@ export const OutboxEventScalarFieldEnum = {
   eventType: 'eventType',
   payload: 'payload',
   occurredAt: 'occurredAt',
-  processedAt: 'processedAt'
+  processedAt: 'processedAt',
+  retryCount: 'retryCount',
+  lastError: 'lastError',
+  lastErrorAt: 'lastErrorAt'
 } as const
 
 export type OutboxEventScalarFieldEnum = (typeof OutboxEventScalarFieldEnum)[keyof typeof OutboxEventScalarFieldEnum]
@@ -889,6 +1055,18 @@ export const RefreshTokenRecordScalarFieldEnum = {
 } as const
 
 export type RefreshTokenRecordScalarFieldEnum = (typeof RefreshTokenRecordScalarFieldEnum)[keyof typeof RefreshTokenRecordScalarFieldEnum]
+
+
+export const PasswordResetTokenRecordScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  usedAt: 'usedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type PasswordResetTokenRecordScalarFieldEnum = (typeof PasswordResetTokenRecordScalarFieldEnum)[keyof typeof PasswordResetTokenRecordScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -966,20 +1144,6 @@ export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel,
 
 
 /**
- * Reference to a field of type 'Json'
- */
-export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
-    
-
-
-/**
- * Reference to a field of type 'QueryMode'
- */
-export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
-    
-
-
-/**
  * Reference to a field of type 'DateTime'
  */
 export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
@@ -990,6 +1154,20 @@ export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
  * Reference to a field of type 'DateTime[]'
  */
 export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Json'
+ */
+export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+    
+
+
+/**
+ * Reference to a field of type 'QueryMode'
+ */
+export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
     
 
 
@@ -1117,10 +1295,12 @@ export type PrismaClientOptions = ({
 }
 export type GlobalOmitConfig = {
   profileRecord?: Prisma.ProfileRecordOmit
+  emailVerificationRecord?: Prisma.EmailVerificationRecordOmit
   outboxEvent?: Prisma.OutboxEventOmit
   invitationRecord?: Prisma.InvitationRecordOmit
   credentialRecord?: Prisma.CredentialRecordOmit
   refreshTokenRecord?: Prisma.RefreshTokenRecordOmit
+  passwordResetTokenRecord?: Prisma.PasswordResetTokenRecordOmit
 }
 
 /* Types for Logging */

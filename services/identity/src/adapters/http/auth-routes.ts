@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { SignJWT } from "jose";
-import { NotFoundError, UnauthorizedError, parseEntityId, parseTenantId, toJsonObject } from "@totem/shared-kernel";
+import { ForbiddenError, NotFoundError, UnauthorizedError, parseEntityId, parseTenantId, toJsonObject } from "@totem/shared-kernel";
 import type { Route } from "@totem/service-runtime";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import type { Profile, ProfileRole } from "../../domain/profile.js";
@@ -76,15 +76,18 @@ function getAppUrl(): string {
   return "http://localhost:3000";
 }
 
-async function issueToken(profile: Profile): Promise<{ accessToken: string; expiresIn: number }> {
+async function issueToken(profile: Profile, emailVerifiedAt: Date | null): Promise<{ accessToken: string; expiresIn: number }> {
   const expiresIn = tokenTtlSeconds();
   let token = new SignJWT({
     email: profile.email,
     tenantId: profile.tenantId,
     app_role: profile.role,
+    // email_verified permite al frontend saber el estado sin llamar a /me
+    email_verified: emailVerifiedAt !== null,
     app_metadata: {
       tenant_id: profile.tenantId,
-      role: profile.role
+      role: profile.role,
+      email_verified: emailVerifiedAt !== null
     }
   })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
@@ -98,13 +101,13 @@ async function issueToken(profile: Profile): Promise<{ accessToken: string; expi
   return { accessToken, expiresIn };
 }
 
-async function issueTokenPair(prisma: PrismaClient, profile: Profile, request: { readonly headers: Record<string, unknown> }): Promise<{
+async function issueTokenPair(prisma: PrismaClient, profile: Profile, emailVerifiedAt: Date | null, request: { readonly headers: Record<string, unknown> }): Promise<{
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
   refreshExpiresIn: number;
 }> {
-  const token = await issueToken(profile);
+  const token = await issueToken(profile, emailVerifiedAt);
   const refreshToken = randomBytes(48).toString("base64url");
   const refreshExpiresIn = refreshTokenTtlDays() * 24 * 60 * 60;
   await prisma.refreshTokenRecord.create({
@@ -133,14 +136,14 @@ function profileResponse(profile: Profile): Record<string, unknown> {
   };
 }
 
-async function findProfileById(prisma: PrismaClient, userId: string): Promise<Profile | null> {
-  const record = await prisma.profileRecord.findFirst({ where: { id: userId } });
-  return record === null ? null : record.payload as Profile;
+/** Devuelve el registro completo (incluye emailVerifiedAt) o null. */
+async function findProfileRecordById(prisma: PrismaClient, userId: string) {
+  return prisma.profileRecord.findFirst({ where: { id: userId } });
 }
 
-async function findProfileByEmail(prisma: PrismaClient, email: string): Promise<Profile | null> {
-  const record = await prisma.profileRecord.findFirst({ where: { payload: { path: ["email"], equals: email } } });
-  return record === null ? null : record.payload as Profile;
+/** Devuelve el registro completo (incluye emailVerifiedAt) o null. */
+async function findProfileRecordByEmail(prisma: PrismaClient, email: string) {
+  return prisma.profileRecord.findFirst({ where: { payload: { path: ["email"], equals: email } } });
 }
 
 async function sendInternalNotification(input: {
@@ -190,6 +193,9 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
         };
 
         const requireVerification = process.env.REQUIRE_EMAIL_VERIFICATION === "true";
+        // Registrar en cuándo se verificó (o null si requiere verificación posterior)
+        const registeredEmailVerifiedAt: Date | null = requireVerification ? null : new Date();
+
         const { rawToken: verificationToken, tokenHash: verificationHash, expiresAt: verificationExpiry } =
           generateEmailVerificationToken(new Date());
 
@@ -203,7 +209,7 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
               status: "active",
               version: 1,
               // Si no se requiere verificación, marcar email como verificado desde el registro
-              emailVerifiedAt: requireVerification ? null : new Date(),
+              emailVerifiedAt: registeredEmailVerifiedAt,
               payload: toJsonObject(profile)
             }
           });
@@ -236,14 +242,14 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
           });
         }
 
-        const token = await issueTokenPair(prisma, profile, request);
+        const token = await issueTokenPair(prisma, profile, registeredEmailVerifiedAt, request);
         return {
           access_token: token.accessToken,
           refresh_token: token.refreshToken,
           token_type: "Bearer",
           expires_in: token.expiresIn,
           refresh_expires_in: token.refreshExpiresIn,
-          emailVerified: !requireVerification,
+          emailVerified: registeredEmailVerifiedAt !== null,
           user: profileResponse(profile)
         };
       }
@@ -271,19 +277,27 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
           throw new UnauthorizedError("Invalid credentials.");
         }
 
-        const profile = await findProfileById(prisma, credential.userId);
+        const profileRecord = await findProfileRecordById(prisma, credential.userId);
+        const profile = profileRecord === null ? null : profileRecord.payload as Profile;
         if (profile === null || !profile.isActive) throw new UnauthorizedError("Account is not active.");
+
+        // Item #5 — Bloquear login si el email no ha sido verificado
+        if (process.env.REQUIRE_EMAIL_VERIFICATION === "true" && profileRecord!.emailVerifiedAt === null) {
+          throw new ForbiddenError("Email address has not been verified. Please check your inbox and verify your email before logging in.");
+        }
+
         await prisma.credentialRecord.update({
           where: { email },
           data: { failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() }
         });
-        const token = await issueTokenPair(prisma, profile, request);
+        const token = await issueTokenPair(prisma, profile, profileRecord!.emailVerifiedAt, request);
         return {
           access_token: token.accessToken,
           refresh_token: token.refreshToken,
           token_type: "Bearer",
           expires_in: token.expiresIn,
           refresh_expires_in: token.refreshExpiresIn,
+          emailVerified: profileRecord!.emailVerifiedAt !== null,
           user: profileResponse(profile)
         };
       }
@@ -298,14 +312,15 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
         if (stored === null || stored.revokedAt !== null || stored.expiresAt <= new Date()) {
           throw new UnauthorizedError("Invalid refresh token.");
         }
-        const profile = await findProfileById(prisma, stored.userId);
+        const profileRecord = await findProfileRecordById(prisma, stored.userId);
+        const profile = profileRecord === null ? null : profileRecord.payload as Profile;
         if (profile === null || !profile.isActive) throw new UnauthorizedError("Account is not active.");
         const token = await prisma.$transaction(async (tx) => {
           await tx.refreshTokenRecord.update({
             where: { id: stored.id },
             data: { revokedAt: new Date() }
           });
-          return issueTokenPair(tx as unknown as PrismaClient, profile, request);
+          return issueTokenPair(tx as unknown as PrismaClient, profile, profileRecord!.emailVerifiedAt, request);
         });
         return {
           access_token: token.accessToken,
@@ -313,6 +328,7 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
           token_type: "Bearer",
           expires_in: token.expiresIn,
           refresh_expires_in: token.refreshExpiresIn,
+          emailVerified: profileRecord!.emailVerifiedAt !== null,
           user: profileResponse(profile)
         };
       }
@@ -322,9 +338,13 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
       path: "/identity/auth/me",
       handler: async (request) => {
         if (request.context.userEmail === null) throw new UnauthorizedError("Authenticated user email is required.");
-        const profile = await findProfileByEmail(prisma, normalizeEmail(request.context.userEmail));
-        if (profile === null) throw new NotFoundError("Profile not found.");
-        return profileResponse(profile);
+        const profileRecord = await findProfileRecordByEmail(prisma, normalizeEmail(request.context.userEmail));
+        if (profileRecord === null) throw new NotFoundError("Profile not found.");
+        const profile = profileRecord.payload as Profile;
+        return {
+          ...profileResponse(profile),
+          emailVerified: profileRecord.emailVerifiedAt !== null
+        };
       }
     },
 

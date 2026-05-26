@@ -51,6 +51,11 @@ export function assertRuntimeConfiguration(serviceName: string, env: NodeJS.Proc
     requireNonEmpty(env, "BILLING_PROVIDER_URL");
   }
 
+  // identity llama al servicio de notifications para enviar emails de verificación y reset
+  if (serviceName === "identity") {
+    requireNonEmpty(env, "NOTIFICATIONS_SERVICE_URL");
+  }
+
   if (serviceName === "assistant") {
     const defaultTenant = env.ASSISTANT_DEFAULT_TENANT_ID;
     if (typeof defaultTenant === "string" && defaultTenant.trim().length > 0) {

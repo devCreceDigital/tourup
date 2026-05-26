@@ -52,10 +52,12 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   ProfileRecord: 'ProfileRecord',
+  EmailVerificationRecord: 'EmailVerificationRecord',
   OutboxEvent: 'OutboxEvent',
   InvitationRecord: 'InvitationRecord',
   CredentialRecord: 'CredentialRecord',
-  RefreshTokenRecord: 'RefreshTokenRecord'
+  RefreshTokenRecord: 'RefreshTokenRecord',
+  PasswordResetTokenRecord: 'PasswordResetTokenRecord'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -80,12 +82,25 @@ export const ProfileRecordScalarFieldEnum = {
   status: 'status',
   version: 'version',
   idempotencyKey: 'idempotencyKey',
+  emailVerifiedAt: 'emailVerifiedAt',
   payload: 'payload',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type ProfileRecordScalarFieldEnum = (typeof ProfileRecordScalarFieldEnum)[keyof typeof ProfileRecordScalarFieldEnum]
+
+
+export const EmailVerificationRecordScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  usedAt: 'usedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type EmailVerificationRecordScalarFieldEnum = (typeof EmailVerificationRecordScalarFieldEnum)[keyof typeof EmailVerificationRecordScalarFieldEnum]
 
 
 export const OutboxEventScalarFieldEnum = {
@@ -95,7 +110,10 @@ export const OutboxEventScalarFieldEnum = {
   eventType: 'eventType',
   payload: 'payload',
   occurredAt: 'occurredAt',
-  processedAt: 'processedAt'
+  processedAt: 'processedAt',
+  retryCount: 'retryCount',
+  lastError: 'lastError',
+  lastErrorAt: 'lastErrorAt'
 } as const
 
 export type OutboxEventScalarFieldEnum = (typeof OutboxEventScalarFieldEnum)[keyof typeof OutboxEventScalarFieldEnum]
@@ -146,6 +164,18 @@ export const RefreshTokenRecordScalarFieldEnum = {
 } as const
 
 export type RefreshTokenRecordScalarFieldEnum = (typeof RefreshTokenRecordScalarFieldEnum)[keyof typeof RefreshTokenRecordScalarFieldEnum]
+
+
+export const PasswordResetTokenRecordScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  usedAt: 'usedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type PasswordResetTokenRecordScalarFieldEnum = (typeof PasswordResetTokenRecordScalarFieldEnum)[keyof typeof PasswordResetTokenRecordScalarFieldEnum]
 
 
 export const SortOrder = {
