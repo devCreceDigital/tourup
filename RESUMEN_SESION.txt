@@ -1,0 +1,219 @@
+========================================================
+  TOURUP — RESUMEN COMPLETO DE SESIONES
+========================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  LO QUE SE CONSTRUYO (TODO EL HISTORIAL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── P0 — Fundamentos ────────────────────────────────────
+• Auth frontend en Next.js (App Router + React Context): login, register, logout
+• HttpError hierarchy: BadRequestError(400), UnauthorizedError(401),
+  ForbiddenError(403), NotFoundError(404), ConflictError(409), ValidationError(422)
+• JWT middleware en el API Gateway con jose (HS256)
+• Hashing de contraseñas con scrypt (formato scrypt$v1$<salt>$<hash>)
+• InMemoryRepository pattern para tests unitarios
+
+── P1 — Resiliencia y observabilidad ───────────────────
+• Logger estructurado JSON (packages/service-runtime/src/logger.ts)
+    - info/debug -> stdout | warn/error -> stderr
+    - Nivel controlado por LOG_LEVEL env var
+• Outbox resiliente:
+    - Contador de reintentos por evento (retryCount)
+    - Máximo de reintentos desde OUTBOX_MAX_RETRIES env var
+    - lastError truncado a 1000 chars, lastErrorAt registrado
+    - log.warn si reintentará, log.error si agotó reintentos
+• Health check endpoint /health en los 15 servicios
+    - createDbHealthCheck(prisma) pingea DB con SELECT 1
+    - Cuenta outboxBacklog y outboxDead
+    - Retorna status: "ok" | "degraded" -> 503 si degraded
+• Password reset flow:
+    - POST /identity/auth/forgot-password (siempre 200, no revela si email existe)
+    - POST /identity/auth/reset-password (valida token SHA-256, TTL 1h)
+    - Al resetear: revoca todos los refresh tokens activos del usuario
+
+── P2 — Validación y rate limiting ─────────────────────
+• Zod v4 centralizado (packages/shared-kernel/src/validate.ts):
+    - Schemas: uuidSchema, emailSchema, paginationSchema, currencyAmountSchema,
+      currencyCodeSchema, isoDatetimeSchema, phoneSchema, userRoleSchema
+    - validate() lanza ValidationError(422) con todos los errores concatenados
+    - validatePartial() para PATCHes parciales
+• Rate limiter pluggable (apps/api-gateway/src/rate-limit.ts):
+    - InMemoryRateLimiterStorage — default, sin dependencias nuevas
+    - UpstashRateLimiterStorage — Redis distribuido via fetch REST API,
+      se activa si UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN están definidos
+    - Límites configurables por env:
+        RATE_LIMIT_ANONYMOUS_RPM (default 60 req/min por IP)
+        RATE_LIMIT_USER_RPM      (default 300 req/min por usuario)
+        RATE_LIMIT_USER_RPH      (default 3000 req/hora por usuario)
+    - Retorna 429 con header retry-after
+• Email verification flow:
+    - POST /identity/auth/verify-email
+    - POST /identity/auth/resend-verification
+    - Controlado por REQUIRE_EMAIL_VERIFICATION=true/false
+    - Al registrar sin verificación: emailVerifiedAt se setea en el momento
+• Outbox con campos nuevos en los 15 schemas de Prisma:
+    - retryCount Int @default(0)
+    - lastError  String?
+    - lastErrorAt DateTime?
+    - @@index([retryCount])
+
+── Migraciones y configuración ─────────────────────────
+• 15 archivos migration.sql generados offline
+• Script PowerShell: infra/scripts/migrate-dev.ps1
+• Script Bash:       infra/scripts/migrate-dev.sh
+• .env.example con todas las variables documentadas
+• .gitignore actualizado para excluir .env y generated/
+• migrate-dev leen POSTGRES_DB/USER/PASSWORD desde el .env raíz
+
+── P3 — Funcional crítico ──────────────────────────────
+✅ Login bloquea emails no verificados:
+   Si REQUIRE_EMAIL_VERIFICATION=true y emailVerifiedAt === null
+   → ForbiddenError(403) "Email address has not been verified."
+
+✅ assertRuntimeConfiguration valida NOTIFICATIONS_SERVICE_URL
+   en producción para serviceName === "identity"
+
+✅ JWT incluye email_verified: boolean en el payload
+   y en app_metadata. Todos los handlers (login, register, refresh,
+   /me) devuelven emailVerified en la respuesta.
+
+── P4 — Notifications service ──────────────────────────
+✅ POST /notifications/send-email implementado con dos flujos:
+   Flujo 1 (role=system, sin tenant):
+     SendTransactionalEmail — para emails de verificación y reset
+     desde identity. Fire-and-forget, no persiste en BD.
+   Flujo 2 (tenant autenticado):
+     DispatchEmailNotification — persiste en BD, requiere tenantId.
+   ConsoleEmailPort: imprime en stdout si RESEND_API_KEY no está configurada.
+   ResendEmailPort:  se activa automáticamente con RESEND_API_KEY.
+
+── P5 — Tests y calidad ────────────────────────────────
+✅ Handlers de identity migrados a Zod validate():
+   - registerBodySchema, loginBodySchema, refreshBodySchema
+   - forgotPasswordBodySchema, resetPasswordBodySchema
+   - verifyEmailBodySchema, resendVerificationBodySchema
+   - passwordSchema: min 8 chars en el boundary
+
+✅ Tests para rate limiter (apps/api-gateway/src/tests/rate-limit.test.ts):
+   34 tests — InMemoryRateLimiterStorage, UpstashRateLimiterStorage,
+   GatewayRateLimiter, createGatewayRateLimiter, extractClientIp
+
+✅ Tests de handlers HTTP (services/identity/src/tests/auth-flows.test.ts):
+   23 tests — forgot-password, reset-password, verify-email,
+   resend-verification, validación Zod
+
+── P6 — DevOps ─────────────────────────────────────────
+✅ GitHub Actions CI (.github/workflows/ci.yml):
+   - Triggers: push main/ronald_back + PRs a main
+   - cancel-in-progress: true
+   - Steps: checkout → pnpm v11 → Node 24 → install --frozen-lockfile
+            → build shared packages → build services (continue-on-error)
+            → pnpm -r --if-present test:unit → type-check packages compartidos
+   - ENV en CI: APP_JWT_SECRET, APP_ENV=test, APP_URL, REQUIRE_EMAIL_VERIFICATION
+
+✅ Docker Compose completo (15 servicios + gateway + web + postgres + ollama):
+   identity:      NOTIFICATIONS_SERVICE_URL, APP_URL, REQUIRE_EMAIL_VERIFICATION,
+                  OUTBOX_POLL_INTERVAL_MS, OUTBOX_MAX_RETRIES
+                  depends_on: notifications (condition: service_started)
+   notifications: RESEND_API_KEY (vacío = ConsoleEmailPort en dev),
+                  DEFAULT_FROM_EMAIL
+
+── Idempotencia ─────────────────────────────────────────
+✅ sendInternalNotification en identity ahora envía x-idempotency-key:
+   - verify-email:       "verify-email:{verificationHash}"
+   - forgot-password:    "forgot-password:{tokenHash}"
+   - resend-verification: "resend-verify:{tokenHash}"
+   Claves determinísticas basadas en el hash del token → el reintento
+   de la misma operación siempre genera la misma clave.
+
+✅ POST /notifications/send-email (flujo sistema) deduplica por clave:
+   - _idempotencyStore: Map<key, expiryTimestamp>, TTL=24h
+   - Primera llamada: envía email + registra clave → {sent: true}
+   - Reintento con misma clave: no envía → {sent: true, deduplicated: true}
+   - Sin clave: siempre envía (comportamiento anterior sin cambios)
+   - Clave expirada (>24h): se trata como nueva, envía normalmente
+   - Compactación automática cada 100 escrituras (evita memory leaks)
+
+✅ Tests de idempotencia (services/notifications/src/tests/idempotency.test.ts):
+   13 tests — isDuplicate/markProcessed (6 tests) + handler send-email (7 tests)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  TOTAL DE TESTS EN CI: 104
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  services/identity       → 57 tests (auth-security + auth-flows)
+  apps/api-gateway        → 34 tests (rate-limit)
+  services/notifications  → 13 tests (idempotency)
+  ─────────────────────────────────────
+  Total                      104 tests
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PARA LEVANTAR LOCALMENTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Copiar variables de entorno:
+     cp .env.example .env
+   Editar .env y completar: POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD,
+   APP_JWT_SECRET, SERVICE_INTERNAL_SECRET
+
+2. Levantar Postgres:
+     docker compose up postgres -d
+
+3. Aplicar migraciones:
+     .\infra\scripts\migrate-dev.ps1       (Windows)
+     bash infra/scripts/migrate-dev.sh     (Linux/Mac)
+
+4. Regenerar clientes Prisma:
+     pnpm prisma:generate
+
+5. Levantar todo:
+     docker compose up -d
+
+6. Correr tests unitarios:
+     pnpm -r --if-present test:unit
+
+   Para levantar solo identity + notifications (desarrollo):
+     docker compose up postgres identity notifications -d
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  VARIABLES DE ENTORNO REQUERIDAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Obligatorias en todos los entornos:
+    POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
+    APP_JWT_SECRET                   (min 32 chars)
+    SERVICE_INTERNAL_SECRET
+
+  Obligatorias en producción (APP_ENV=production):
+    APP_URL                          (ej. https://tourup.com)
+    NOTIFICATIONS_SERVICE_URL        (para identity)
+
+  Opcionales con defaults:
+    APP_ENV                          (default: local)
+    APP_JWT_ISSUER                   (default: totem-hub)
+    REQUIRE_EMAIL_VERIFICATION       (default: false)
+    OUTBOX_POLL_INTERVAL_MS          (default: 5000)
+    OUTBOX_MAX_RETRIES               (default: 5)
+    RESEND_API_KEY                   (default: ConsoleEmailPort)
+    DEFAULT_FROM_EMAIL               (default: noreply@tourup.local)
+    RATE_LIMIT_ANONYMOUS_RPM         (default: 60)
+    RATE_LIMIT_USER_RPM              (default: 300)
+    RATE_LIMIT_USER_RPH              (default: 3000)
+    UPSTASH_REDIS_REST_URL           (activa Redis distribuido)
+    UPSTASH_REDIS_REST_TOKEN         (requerido si URL definida)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PENDIENTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Saga Enrollments + Payments — consistencia entre inscripción y cobro
+  sin transacción distribuida (patrón planificado, no implementado)
+
+========================================================
+  RAMA: ronald_back  |  REPO: devCreceDigital/tourup
+========================================================
