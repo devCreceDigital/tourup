@@ -1,0 +1,101 @@
+========================================================
+  TOURUP — SESION DE HOY (2026-05-26)
+========================================================
+
+TEMA PRINCIPAL: Idempotencia en el envio de emails del sistema
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Que es la idempotencia?
+  Que llamar la misma operacion N veces produce el mismo resultado
+  que llamarla una sola vez. Clave cuando hay reintentos de red.
+
+Problema que resolvimos:
+  identity llama a notifications para enviar un email. Si la red
+  falla y identity reintenta, notifications enviaba el email DOS
+  veces (verificacion duplicada, reset duplicado, etc.).
+
+──────────────────────────────────────────────────────
+  CAMBIOS EN EL CODIGO
+──────────────────────────────────────────────────────
+
+1. services/identity/src/adapters/http/auth-routes.ts
+   sendInternalNotification ahora envia el header:
+     x-idempotency-key: <clave deterministica basada en el token hash>
+
+   Claves por operacion:
+     verify-email        -> "verify-email:{verificationHash}"
+     forgot-password     -> "forgot-password:{tokenHash}"
+     resend-verification -> "resend-verify:{tokenHash}"
+
+   Como el hash del token no cambia entre reintentos, la misma
+   operacion siempre genera la misma clave -> el servidor puede
+   detectar el duplicado.
+
+2. services/notifications/src/adapters/http/business-routes.ts
+   Agregado el IdempotencyStore (Map en memoria con TTL de 24h):
+
+     _idempotencyStore: Map<key, expiryTimestamp>
+
+   Dos funciones exportadas:
+     isDuplicate(key)   -> true si la clave ya fue procesada y sigue vigente
+     markProcessed(key) -> registra la clave con TTL de 24 horas
+
+   Comportamiento del handler POST /notifications/send-email (sistema):
+     Primera llamada con clave  -> envia email + registra clave
+                                   -> { sent: true }
+     Reintento con misma clave  -> NO envia, responde inmediatamente
+                                   -> { sent: true, deduplicated: true }
+     Sin clave                  -> siempre envia (comportamiento anterior)
+     Clave expirada (>24h)      -> se trata como nueva, envia normalmente
+
+   Compactacion automatica cada 100 escrituras para evitar memory leaks.
+
+3. services/notifications/src/tests/idempotency.test.ts (NUEVO)
+   13 tests — todos pasando
+
+   Suite 1: isDuplicate / markProcessed (6 tests)
+     - retorna false para clave nueva
+     - retorna true despues de markProcessed
+     - retorna false para clave diferente
+     - retorna false para clave expirada
+     - TTL de entrada valida es ~24h en el futuro
+     - markProcessed sobreescribe entrada existente
+
+   Suite 2: handler send-email flujo sistema (7 tests)
+     - envia email y retorna {sent: true} en primera llamada
+     - retorna {deduplicated: true} en reintento con misma clave
+     - envia dos veces si las claves son distintas
+     - siempre envia sin x-idempotency-key
+     - ignora entrada expirada y reenvia
+     - registra la clave en el store despues de enviar
+     - NO registra en el store si el envio falla
+
+4. services/notifications/package.json
+   Agregado script:
+     "test:unit": "node --test --import tsx/esm src/tests/idempotency.test.ts"
+
+5. .github/workflows/ci.yml
+   Actualizado el comentario de tests:
+     services/notifications -> idempotency.test.ts (13 tests)
+     Total en CI: 104 tests
+
+──────────────────────────────────────────────────────
+  TOTAL DE TESTS EN CI AHORA
+──────────────────────────────────────────────────────
+
+  services/identity       -> 57 tests
+  apps/api-gateway        -> 34 tests
+  services/notifications  -> 13 tests
+  ──────────────────────────────────
+  Total                     104 tests
+
+──────────────────────────────────────────────────────
+  COMMITS SUBIDOS A ronald_back
+──────────────────────────────────────────────────────
+
+  0f3470b  feat(notifications+identity): idempotency for system email sends
+  3280052  docs: actualizar resumen de sesiones con P0-P6 + idempotencia (104 tests)
+
+  Rama remota: origin/ronald_back (devCreceDigital/tourup)
+
+========================================================
