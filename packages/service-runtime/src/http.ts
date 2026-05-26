@@ -4,6 +4,7 @@ import { HttpError, parseTenantId, parseUserId, type TenantContext } from "@tote
 import { defaultRateLimiter } from "./rate-limit.js";
 import { runWithTenantContext } from "./prisma.js";
 import { assertRuntimeConfiguration } from "./configuration.js";
+import { createLogger } from "./logger.js";
 
 export type JsonHandler = (request: JsonRequest) => Promise<unknown>;
 
@@ -133,6 +134,7 @@ export function startHttpService(serviceName: string, routes: readonly Route[]):
   assertRuntimeConfiguration(serviceName);
   const port = Number(process.env.PORT ?? "3000");
   const limiter = defaultRateLimiter();
+  const log = createLogger(serviceName);
   const server = createServer(async (request, response) => {
     try {
       applyCors(request, response);
@@ -189,7 +191,10 @@ export function startHttpService(serviceName: string, routes: readonly Route[]):
         const statusCode = isClientError ? 400 : 500;
         const code = isClientError ? "bad_request" : "internal_error";
         if (!isClientError) {
-          console.error(`[${context?.requestId ?? "no-req-id"}] Unhandled error:`, error);
+          log.error("Unhandled error", {
+            requestId: context?.requestId ?? "no-req-id",
+            error: error instanceof Error ? error : new Error(String(error))
+          });
         }
         send(response, statusCode, { error: { code, message } });
       }
@@ -197,20 +202,20 @@ export function startHttpService(serviceName: string, routes: readonly Route[]):
   });
 
   server.listen(port, () => {
-    console.log(`${serviceName} listening on ${port}`);
+    log.info("Service started", { port });
   });
 
   const shutdown = (signal: NodeJS.Signals) => {
-    console.log(`${serviceName} received ${signal}; draining HTTP server`);
+    log.info("Shutdown signal received; draining HTTP server", { signal });
     server.close((error) => {
       if (error) {
-        console.error(`${serviceName} shutdown failed`, error);
+        log.error("Shutdown failed", { error: error instanceof Error ? error : new Error(String(error)) });
         process.exit(1);
       }
       process.exit(0);
     });
     setTimeout(() => {
-      console.error(`${serviceName} shutdown timed out`);
+      log.error("Shutdown timed out; forcing exit");
       process.exit(1);
     }, 10_000).unref();
   };

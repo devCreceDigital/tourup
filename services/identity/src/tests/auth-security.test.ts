@@ -11,9 +11,12 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   computeLockoutExpiry,
+  generateResetToken,
   hashPassword,
+  isResetTokenExpired,
   LOCKOUT_DURATION_MS,
   MAX_FAILED_ATTEMPTS,
+  RESET_TOKEN_TTL_MS,
   verifyPassword
 } from "../domain/password.js";
 
@@ -129,5 +132,71 @@ describe("computeLockoutExpiry", () => {
 
   it(`MAX_FAILED_ATTEMPTS es 10`, () => {
     assert.equal(MAX_FAILED_ATTEMPTS, 10);
+  });
+});
+
+// ─── generateResetToken ────────────────────────────────────────────────────────
+describe("generateResetToken", () => {
+  const now = new Date("2025-06-01T10:00:00.000Z");
+
+  it("genera rawToken no vacío en formato base64url", () => {
+    const { rawToken } = generateResetToken(now);
+    assert.ok(rawToken.length > 0, "rawToken debe ser no vacío");
+    // base64url solo contiene A-Z a-z 0-9 - _
+    assert.match(rawToken, /^[A-Za-z0-9\-_]+$/, "rawToken debe ser base64url");
+  });
+
+  it("genera tokenHash distinto al rawToken (es SHA-256 hex de 64 chars)", () => {
+    const { rawToken, tokenHash } = generateResetToken(now);
+    assert.notEqual(rawToken, tokenHash);
+    assert.equal(tokenHash.length, 64, "SHA-256 hex debe tener 64 chars");
+    assert.match(tokenHash, /^[0-9a-f]+$/, "tokenHash debe ser hex lowercase");
+  });
+
+  it("dos tokens generados en el mismo instante son distintos (aleatoriedad)", () => {
+    const t1 = generateResetToken(now);
+    const t2 = generateResetToken(now);
+    assert.notEqual(t1.rawToken, t2.rawToken);
+    assert.notEqual(t1.tokenHash, t2.tokenHash);
+  });
+
+  it(`expiresAt es now + ${RESET_TOKEN_TTL_MS}ms (1 hora)`, () => {
+    const { expiresAt } = generateResetToken(now);
+    assert.equal(expiresAt.getTime(), now.getTime() + RESET_TOKEN_TTL_MS);
+  });
+
+  it("RESET_TOKEN_TTL_MS es 1 hora (3600000 ms)", () => {
+    assert.equal(RESET_TOKEN_TTL_MS, 3_600_000);
+  });
+});
+
+// ─── isResetTokenExpired ───────────────────────────────────────────────────────
+describe("isResetTokenExpired", () => {
+  const now = new Date("2025-06-01T10:00:00.000Z");
+  const future = new Date(now.getTime() + 30 * 60 * 1000); // +30 min
+
+  it("retorna false para un token vigente no usado", () => {
+    const result = isResetTokenExpired({ expiresAt: future, usedAt: null }, now);
+    assert.equal(result, false);
+  });
+
+  it("retorna true cuando expiresAt <= now (token vencido)", () => {
+    const past = new Date(now.getTime() - 1);
+    assert.equal(isResetTokenExpired({ expiresAt: past, usedAt: null }, now), true);
+  });
+
+  it("retorna true cuando expiresAt === now (límite exacto)", () => {
+    assert.equal(isResetTokenExpired({ expiresAt: now, usedAt: null }, now), true);
+  });
+
+  it("retorna true cuando usedAt no es null (token ya consumido)", () => {
+    const usedAt = new Date(now.getTime() - 5_000);
+    assert.equal(isResetTokenExpired({ expiresAt: future, usedAt }, now), true);
+  });
+
+  it("retorna true si tanto expiresAt venció como usedAt está seteado", () => {
+    const past = new Date(now.getTime() - 1);
+    const usedAt = new Date(now.getTime() - 500);
+    assert.equal(isResetTokenExpired({ expiresAt: past, usedAt }, now), true);
   });
 });

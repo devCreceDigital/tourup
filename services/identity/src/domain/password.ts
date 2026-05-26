@@ -1,4 +1,4 @@
-import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
 /**
  * Longitud de la clave derivada con scrypt (64 bytes = 512 bits).
@@ -65,4 +65,37 @@ export const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 export function computeLockoutExpiry(failedCount: number, now: Date): Date | null {
   if (failedCount < MAX_FAILED_ATTEMPTS) return null;
   return new Date(now.getTime() + LOCKOUT_DURATION_MS);
+}
+
+// ─── Password reset ───────────────────────────────────────────────────────────
+
+/**
+ * TTL de los tokens de restablecimiento de contraseña (1 hora).
+ */
+export const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+
+/**
+ * Genera un token opaco de reset (48 bytes aleatorios en base64url).
+ * Retorna el token en claro (para enviarlo por email) y su hash SHA-256
+ * (para almacenar en base de datos).
+ */
+export function generateResetToken(now: Date): {
+  readonly rawToken: string;
+  readonly tokenHash: string;
+  readonly expiresAt: Date;
+} {
+  const rawToken = randomBytes(48).toString("base64url");
+  const tokenHash = createHash("sha256").update(rawToken, "utf-8").digest("hex");
+  const expiresAt = new Date(now.getTime() + RESET_TOKEN_TTL_MS);
+  return { rawToken, tokenHash, expiresAt };
+}
+
+/**
+ * Devuelve true si el token expiró o ya fue usado.
+ */
+export function isResetTokenExpired(token: {
+  expiresAt: Date;
+  usedAt: Date | null;
+}, now: Date): boolean {
+  return token.usedAt !== null || token.expiresAt <= now;
 }

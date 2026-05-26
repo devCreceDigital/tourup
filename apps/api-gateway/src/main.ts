@@ -1,10 +1,13 @@
 import { createServer, type IncomingHttpHeaders, type IncomingMessage } from "node:http";
-import { assertRuntimeConfiguration } from "@totem/service-runtime";
+import { assertRuntimeConfiguration, createLogger } from "@totem/service-runtime";
 import { applyTrustedIdentityHeaders, authenticateGatewayRequest, isPublicPath } from "./auth.js";
 import { loadServiceRegistry } from "./service-registry.js";
+import { GatewayRateLimiter, extractClientIp } from "./rate-limit.js";
 
 assertRuntimeConfiguration("api-gateway");
 
+const log = createLogger("api-gateway");
+const rateLimiter = new GatewayRateLimiter();
 const registry = loadServiceRegistry(process.env);
 const port = Number(process.env.PORT ?? "4100");
 const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001")
@@ -98,6 +101,25 @@ async function handle(request: Request): Promise<Response> {
     const message = error instanceof Error ? error.message : "Invalid authorization token.";
     return json(401, { error: { code: "unauthorized", message } });
   }
+
+  // ── Rate limiting (después de auth, para usar userId como clave) ──────────
+  try {
+    rateLimiter.assertAllowed(principal.userId, extractClientIp(request));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Too many requests.";
+    const retryAfter = (error as { retryAfter?: number }).retryAfter;
+    const headers = new Headers({ "retry-after": String(retryAfter ?? 60) });
+    log.warn("Rate limit exceeded", {
+      userId: principal.userId,
+      path: url.pathname,
+      retryAfter
+    });
+    return new Response(JSON.stringify({ error: { code: "rate_limit_exceeded", message } }), {
+      status: 429,
+      headers: Object.assign({ "content-type": "application/json; charset=utf-8" }, retryAfter !== undefined ? { "retry-after": String(retryAfter) } : {})
+    });
+  }
+
   const publicPath = isPublicPath(url.pathname);
   if (!publicPath && principal.role === "anonymous") {
     return json(401, { error: { code: "unauthorized", message: "Authentication is required." } });
@@ -137,6 +159,10 @@ const server = createServer(async (incoming, outgoing) => {
   const request = new Request(`http://localhost${incoming.url ?? "/"}`, requestInit);
 
   const response = await handle(request).catch((error) => {
+    log.error("Gateway unhandled error", {
+      error: error instanceof Error ? error : new Error(String(error)),
+      url: incoming.url
+    });
     const message = error instanceof Error ? error.message : "Unexpected gateway error.";
     return json(502, { error: { code: "gateway_error", message } });
   });
@@ -160,20 +186,20 @@ const server = createServer(async (incoming, outgoing) => {
 });
 
 server.listen(port, () => {
-  console.log(`api-gateway listening on ${port}`);
+  log.info("Service started", { port });
 });
 
 const shutdown = (signal: NodeJS.Signals) => {
-  console.log(`api-gateway received ${signal}; draining HTTP server`);
+  log.info("Shutdown signal received; draining HTTP server", { signal });
   server.close((error) => {
     if (error) {
-      console.error("api-gateway shutdown failed", error);
+      log.error("Shutdown failed", { error: error instanceof Error ? error : new Error(String(error)) });
       process.exit(1);
     }
     process.exit(0);
   });
   setTimeout(() => {
-    console.error("api-gateway shutdown timed out");
+    log.error("Shutdown timed out; forcing exit");
     process.exit(1);
   }, 10_000).unref();
 };

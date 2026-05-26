@@ -4,7 +4,7 @@ import { NotFoundError, UnauthorizedError, parseEntityId, parseTenantId, toJsonO
 import type { Route } from "@totem/service-runtime";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import type { Profile, ProfileRole } from "../../domain/profile.js";
-import { computeLockoutExpiry, hashPassword, verifyPassword } from "../../domain/password.js";
+import { computeLockoutExpiry, generateResetToken, hashPassword, isResetTokenExpired, verifyPassword } from "../../domain/password.js";
 
 function record(value: unknown): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error("Request body must be an object.");
@@ -250,6 +250,101 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
         const profile = await findProfileByEmail(prisma, normalizeEmail(request.context.userEmail));
         if (profile === null) throw new NotFoundError("Profile not found.");
         return profileResponse(profile);
+      }
+    },
+
+    // ── Forgot password ──────────────────────────────────────────────────────
+    {
+      method: "POST",
+      path: "/identity/auth/forgot-password",
+      handler: async (request) => {
+        const body = record(request.body);
+        const email = normalizeEmail(text(body, "email"));
+
+        // Comprobamos que la cuenta existe; si no, respondemos igual (no revelar existencia)
+        const credential = await prisma.credentialRecord.findUnique({ where: { email } });
+
+        if (credential !== null) {
+          // Invalidar tokens de reset anteriores no usados para este email
+          await prisma.passwordResetTokenRecord.updateMany({
+            where: { email, usedAt: null },
+            data: { usedAt: new Date() }
+          });
+
+          const { rawToken, tokenHash, expiresAt } = generateResetToken(new Date());
+          await prisma.passwordResetTokenRecord.create({
+            data: {
+              id: randomUUID(),
+              email,
+              tokenHash,
+              expiresAt
+            }
+          });
+
+          // Notificación por email — integración opcional con Notifications service
+          const notificationsUrl = process.env.NOTIFICATIONS_SERVICE_URL;
+          if (typeof notificationsUrl === "string" && notificationsUrl.length > 0) {
+            const secret = process.env.SERVICE_INTERNAL_SECRET;
+            await fetch(`${notificationsUrl.replace(/\/$/, "")}/notifications/email/password-reset`, {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                ...(secret ? { "x-internal-service-secret": secret } : {}),
+                "x-internal-user-role": "system"
+              },
+              body: JSON.stringify({ email, token: rawToken, expiresAt: expiresAt.toISOString() })
+            }).catch(() => {
+              // No lanzar si el servicio de notificaciones no está disponible
+            });
+          }
+        }
+
+        // Respuesta siempre 200 para no revelar si el email existe o no
+        return { message: "If the email is registered, you will receive a reset link shortly." };
+      }
+    },
+
+    // ── Reset password ───────────────────────────────────────────────────────
+    {
+      method: "POST",
+      path: "/identity/auth/reset-password",
+      handler: async (request) => {
+        const body = record(request.body);
+        const rawToken  = text(body, "token");
+        const newPassword = text(body, "password");
+
+        const tokenHash = createHash("sha256").update(rawToken, "utf-8").digest("hex");
+        const resetRecord = await prisma.passwordResetTokenRecord.findUnique({ where: { tokenHash } });
+
+        if (resetRecord === null || isResetTokenExpired(resetRecord, new Date())) {
+          // Respuesta genérica para no revelar información
+          throw new Error("Invalid or expired password reset token.");
+        }
+
+        await prisma.$transaction(async (tx) => {
+          // Marcar el token como usado
+          await tx.passwordResetTokenRecord.update({
+            where: { id: resetRecord.id },
+            data: { usedAt: new Date() }
+          });
+          // Actualizar credencial
+          await tx.credentialRecord.update({
+            where: { email: resetRecord.email },
+            data: {
+              passwordHash: hashPassword(newPassword),
+              passwordUpdatedAt: new Date(),
+              failedLoginCount: 0,
+              lockedUntil: null
+            }
+          });
+          // Revocar todos los refresh tokens activos por seguridad
+          await tx.refreshTokenRecord.updateMany({
+            where: { userId: (await tx.credentialRecord.findUnique({ where: { email: resetRecord.email } }))?.userId ?? "", revokedAt: null },
+            data: { revokedAt: new Date() }
+          });
+        });
+
+        return { message: "Password updated successfully. Please log in again." };
       }
     }
   ];
