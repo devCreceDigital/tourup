@@ -1,5 +1,5 @@
 import type { EntityId, IdempotencyKey, TenantContext, TenantId } from "@totem/shared-kernel";
-import { assertAdmin, requireTenant, tenantScope } from "@totem/shared-kernel";
+import { NotFoundError, assertAdmin, requireTenant, tenantScope } from "@totem/shared-kernel";
 import { assertEnrollmentCanBeConfirmed, type Enrollment } from "../domain/enrollment.js";
 
 export interface EnrollmentRepository {
@@ -37,7 +37,7 @@ export class ConfirmEnrollment {
     const tenantId = requireTenant(context);
     const enrollment = await this.enrollments.findById(tenantId, enrollmentId);
     if (enrollment === null) {
-      throw new Error("Enrollment not found.");
+      throw new NotFoundError("Enrollment not found.");
     }
     assertEnrollmentCanBeConfirmed(enrollment);
     const confirmed: Enrollment = { ...enrollment, status: "confirmado" };
@@ -54,7 +54,7 @@ export class CancelEnrollment {
     const tenantId = requireTenant(context);
     const enrollment = await this.enrollments.findById(tenantId, enrollmentId);
     if (enrollment === null) {
-      throw new Error("Enrollment not found.");
+      throw new NotFoundError("Enrollment not found.");
     }
     const cancelled: Enrollment = { ...enrollment, status: "cancelado" };
     await this.enrollments.save(cancelled);

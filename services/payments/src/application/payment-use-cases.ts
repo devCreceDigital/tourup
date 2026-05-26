@@ -1,5 +1,5 @@
 import type { EntityId, IdempotencyKey, TenantContext, TenantId } from "@totem/shared-kernel";
-import { assertAdmin, requireTenant } from "@totem/shared-kernel";
+import { NotFoundError, assertAdmin, requireTenant } from "@totem/shared-kernel";
 import { assertPaymentCanBeVerified, type Payment } from "../domain/payment.js";
 
 export interface PaymentRepository {
@@ -34,7 +34,7 @@ export class VerifyPayment {
     const tenantId = requireTenant(context);
     const payment = await this.payments.findById(tenantId, paymentId);
     if (payment === null) {
-      throw new Error("Payment not found.");
+      throw new NotFoundError("Payment not found.");
     }
     assertPaymentCanBeVerified(payment);
     const verified: Payment = { ...payment, status: "verificado" };
@@ -51,7 +51,7 @@ export class RejectPayment {
     const tenantId = requireTenant(context);
     const payment = await this.payments.findById(tenantId, input.paymentId);
     if (payment === null) {
-      throw new Error("Payment not found.");
+      throw new NotFoundError("Payment not found.");
     }
     const rejected: Payment = { ...payment, status: "rechazado", notes: input.reason };
     await this.payments.save(rejected);

@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
-import { parseTenantId, parseUserId, type TenantContext } from "@totem/shared-kernel";
+import { HttpError, parseTenantId, parseUserId, type TenantContext } from "@totem/shared-kernel";
 import { defaultRateLimiter } from "./rate-limit.js";
 import { runWithTenantContext } from "./prisma.js";
 import { assertRuntimeConfiguration } from "./configuration.js";
@@ -171,8 +171,28 @@ export function startHttpService(serviceName: string, routes: readonly Route[]):
       }));
       send(response, 200, payload);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unexpected error.";
-      send(response, 400, { error: { code: "request_failed", message } });
+      if (error instanceof HttpError) {
+        // Error de dominio/aplicación con código HTTP específico
+        send(response, error.statusCode, { error: { code: error.code, message: error.message } });
+      } else if (error instanceof SyntaxError) {
+        // JSON malformado en el body
+        send(response, 400, { error: { code: "bad_request", message: "Invalid JSON in request body." } });
+      } else {
+        // Error inesperado: 400 si parece error de validación, 500 si es servidor
+        const message = error instanceof Error ? error.message : "Unexpected error.";
+        const isClientError =
+          message.includes("is required") ||
+          message.includes("must be") ||
+          message.includes("Invalid") ||
+          message.includes("already") ||
+          message.includes("cannot");
+        const statusCode = isClientError ? 400 : 500;
+        const code = isClientError ? "bad_request" : "internal_error";
+        if (!isClientError) {
+          console.error(`[${context?.requestId ?? "no-req-id"}] Unhandled error:`, error);
+        }
+        send(response, statusCode, { error: { code, message } });
+      }
     }
   });
 

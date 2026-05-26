@@ -1,11 +1,10 @@
-import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { SignJWT } from "jose";
-import { parseEntityId, parseTenantId, toJsonObject } from "@totem/shared-kernel";
+import { NotFoundError, UnauthorizedError, parseEntityId, parseTenantId, toJsonObject } from "@totem/shared-kernel";
 import type { Route } from "@totem/service-runtime";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import type { Profile, ProfileRole } from "../../domain/profile.js";
-
-const passwordKeyLength = 64;
+import { computeLockoutExpiry, hashPassword, verifyPassword } from "../../domain/password.js";
 
 function record(value: unknown): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error("Request body must be an object.");
@@ -32,20 +31,7 @@ function role(value: unknown): ProfileRole {
   return "viajero";
 }
 
-function hashPassword(password: string): string {
-  if (password.length < 8) throw new Error("Password must have at least 8 characters.");
-  const salt = randomBytes(24).toString("base64url");
-  const hash = scryptSync(password, salt, passwordKeyLength).toString("base64url");
-  return `scrypt$v1$${salt}$${hash}`;
-}
-
-function verifyPassword(password: string, encoded: string): boolean {
-  const [algorithm, version, salt, expected] = encoded.split("$");
-  if (algorithm !== "scrypt" || version !== "v1" || salt === undefined || expected === undefined) return false;
-  const actual = scryptSync(password, salt, passwordKeyLength);
-  const expectedBuffer = Buffer.from(expected, "base64url");
-  return actual.byteLength === expectedBuffer.byteLength && timingSafeEqual(actual, expectedBuffer);
-}
+// hashPassword y verifyPassword vienen de ../../domain/password.js
 
 function jwtSecret(): Uint8Array {
   const secret = process.env.APP_JWT_SECRET;
@@ -196,22 +182,22 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
         const password = text(body, "password");
         const credential = await prisma.credentialRecord.findUnique({ where: { email } });
         if (credential === null || (credential.lockedUntil !== null && credential.lockedUntil > new Date())) {
-          throw new Error("Invalid credentials.");
+          throw new UnauthorizedError("Invalid credentials.");
         }
         if (!verifyPassword(password, credential.passwordHash)) {
-          const failedLoginCount = credential.failedLoginCount + 1;
+          const failedCount = credential.failedLoginCount + 1;
           await prisma.credentialRecord.update({
             where: { email },
             data: {
-              failedLoginCount,
-              lockedUntil: failedLoginCount >= 10 ? new Date(Date.now() + 15 * 60 * 1000) : null
+              failedLoginCount: failedCount,
+              lockedUntil: computeLockoutExpiry(failedCount, new Date())
             }
           });
-          throw new Error("Invalid credentials.");
+          throw new UnauthorizedError("Invalid credentials.");
         }
 
         const profile = await findProfileById(prisma, credential.userId);
-        if (profile === null || !profile.isActive) throw new Error("Profile is not active.");
+        if (profile === null || !profile.isActive) throw new UnauthorizedError("Account is not active.");
         await prisma.credentialRecord.update({
           where: { email },
           data: { failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() }
@@ -235,10 +221,10 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
         const refreshToken = text(body, "refreshToken");
         const stored = await prisma.refreshTokenRecord.findUnique({ where: { tokenHash: hashRefreshToken(refreshToken) } });
         if (stored === null || stored.revokedAt !== null || stored.expiresAt <= new Date()) {
-          throw new Error("Invalid refresh token.");
+          throw new UnauthorizedError("Invalid refresh token.");
         }
         const profile = await findProfileById(prisma, stored.userId);
-        if (profile === null || !profile.isActive) throw new Error("Profile is not active.");
+        if (profile === null || !profile.isActive) throw new UnauthorizedError("Account is not active.");
         const token = await prisma.$transaction(async (tx) => {
           await tx.refreshTokenRecord.update({
             where: { id: stored.id },
@@ -260,9 +246,9 @@ export function createIdentityAuthRoutes(prisma: PrismaClient): readonly Route[]
       method: "GET",
       path: "/identity/auth/me",
       handler: async (request) => {
-        if (request.context.userEmail === null) throw new Error("Authenticated user email is required.");
+        if (request.context.userEmail === null) throw new UnauthorizedError("Authenticated user email is required.");
         const profile = await findProfileByEmail(prisma, normalizeEmail(request.context.userEmail));
-        if (profile === null) throw new Error("Profile not found.");
+        if (profile === null) throw new NotFoundError("Profile not found.");
         return profileResponse(profile);
       }
     }

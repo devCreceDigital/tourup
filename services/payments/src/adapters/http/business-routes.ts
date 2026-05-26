@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { createMoney, parseEntityId, parseIdempotencyKey, parseTenantId, requireTenant, toJsonObject } from "@totem/shared-kernel";
+import { BadRequestError, createMoney, parseEntityId, parseIdempotencyKey, parseTenantId, requireTenant, toJsonObject } from "@totem/shared-kernel";
 import type { Route } from "@totem/service-runtime";
+import { verifyMercadoPagoWebhook } from "./mercadopago-signature.js";
 import { RegisterManualPayment, RejectPayment, VerifyPayment, type PaymentRepository } from "../../application/payment-use-cases.js";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import type { Payment, PaymentMethod } from "../../domain/payment.js";
@@ -183,9 +184,28 @@ export function createPaymentBusinessRoutes(repository: PaymentRepository, prism
       path: "/payments/webhook/mercadopago",
       handler: async (request) => {
         const body = bodyAsRecord(request.body ?? {});
+
+        // ── Verificación de firma HMAC-SHA256 ──────────────────────────────────
+        // MercadoPago envía x-signature: "ts=<timestamp>,v1=<hmac_hex>"
+        // El manifest es: "id:<data.id>;request-id:<x-request-id>;ts:<timestamp>;"
+        const data = typeof body.data === "object" && body.data !== null && !Array.isArray(body.data)
+          ? body.data as Record<string, unknown>
+          : {};
+        const dataId = optionalString(data.id) ?? optionalString(body["data.id"]);
+        const sigResult = verifyMercadoPagoWebhook({
+          xSignature: request.headers["x-signature"],
+          xRequestId: request.headers["x-request-id"],
+          dataId,
+          secret: process.env.MERCADOPAGO_WEBHOOK_SECRET,
+          isProduction: process.env.NODE_ENV === "production" || process.env.APP_ENV === "production"
+        });
+        if (!sigResult.valid) {
+          throw new BadRequestError(`Webhook signature invalid: ${sigResult.reason}`);
+        }
+        // ── Fin verificación de firma ──────────────────────────────────────────
+        // `data` y `dataId` ya fueron parseados arriba para la verificación de firma
         const eventId = optionalString(body.id) ?? optionalString(body.action) ?? randomUUID();
-        const data = typeof body.data === "object" && body.data !== null && !Array.isArray(body.data) ? body.data as Record<string, unknown> : {};
-        const providerPaymentId = optionalString(data.id) ?? optionalString(body["data.id"]) ?? optionalString(body.paymentId);
+        const providerPaymentId = dataId ?? optionalString(body.paymentId);
         await prisma.providerPaymentEvent.upsert({
           where: { provider_eventId: { provider: "mercadopago", eventId } },
           create: {
