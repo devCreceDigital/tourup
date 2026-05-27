@@ -151,7 +151,7 @@ export default function HomePage() {
                 </div>
               ) : (
                 <div className="divide-y divide-border">
-                  {rankings?.data.slice(0, 10).map((entry) => (
+                  {rankings?.data?.slice(0, 10).map((entry) => (
                     <div
                       key={entry.operator_id}
                       className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 cursor-pointer transition-colors"
