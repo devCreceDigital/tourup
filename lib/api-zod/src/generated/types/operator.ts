@@ -32,6 +32,10 @@ export interface Operator {
   /** @nullable */
   description?: string | null;
   /** @nullable */
+  clase?: string | null;
+  /** @nullable */
+  modalidad_autorizada?: string | null;
+  /** @nullable */
   rank_nacional?: number | null;
   created_at: string;
 }

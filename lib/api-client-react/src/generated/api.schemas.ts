@@ -35,6 +35,10 @@ export interface Operator {
   /** @nullable */
   description?: string | null;
   /** @nullable */
+  clase?: string | null;
+  /** @nullable */
+  modalidad_autorizada?: string | null;
+  /** @nullable */
   rank_nacional?: number | null;
   created_at: string;
 }
@@ -138,6 +142,20 @@ export interface OperatorDetail {
   phone?: string | null;
   /** @nullable */
   email?: string | null;
+  /** @nullable */
+  clase?: string | null;
+  /** @nullable */
+  modalidad_autorizada?: string | null;
+  /** @nullable */
+  rep_legal?: string | null;
+  /** @nullable */
+  nro_certificado?: string | null;
+  /** @nullable */
+  fecha_expedicion?: string | null;
+  /** @nullable */
+  ubigeo?: string | null;
+  /** @nullable */
+  source?: string | null;
   /** @nullable */
   rank_nacional?: number | null;
   created_at: string;
@@ -298,6 +316,14 @@ export type ListOperatorsParams = {
 search?: string;
 region?: string;
 operator_type?: string;
+/**
+ * MINCETUR agency class (e.g. Minorista, Mayorista, Operador de Turismo)
+ */
+clase?: string;
+/**
+ * MINCETUR authorized modality (e.g. Digital, Presencial)
+ */
+modalidad?: string;
 niche?: string;
 min_score?: number;
 max_score?: number;

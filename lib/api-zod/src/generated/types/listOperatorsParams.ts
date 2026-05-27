@@ -10,6 +10,14 @@ export type ListOperatorsParams = {
 search?: string;
 region?: string;
 operator_type?: string;
+/**
+ * MINCETUR agency class (e.g. Minorista, Mayorista, Operador de Turismo)
+ */
+clase?: string;
+/**
+ * MINCETUR authorized modality (e.g. Digital, Presencial)
+ */
+modalidad?: string;
 niche?: string;
 min_score?: number;
 max_score?: number;

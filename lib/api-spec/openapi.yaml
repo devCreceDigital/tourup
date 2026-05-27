@@ -47,6 +47,16 @@ paths:
           in: query
           schema:
             type: string
+        - name: clase
+          in: query
+          description: MINCETUR agency class (e.g. Minorista, Mayorista, Operador de Turismo)
+          schema:
+            type: string
+        - name: modalidad
+          in: query
+          description: MINCETUR authorized modality (e.g. Digital, Presencial)
+          schema:
+            type: string
         - name: niche
           in: query
           schema:
@@ -401,6 +411,10 @@ components:
           type: ["string", "null"]
         description:
           type: ["string", "null"]
+        clase:
+          type: ["string", "null"]
+        modalidad_autorizada:
+          type: ["string", "null"]
         rank_nacional:
           type: ["integer", "null"]
         created_at:
@@ -449,6 +463,20 @@ components:
         phone:
           type: ["string", "null"]
         email:
+          type: ["string", "null"]
+        clase:
+          type: ["string", "null"]
+        modalidad_autorizada:
+          type: ["string", "null"]
+        rep_legal:
+          type: ["string", "null"]
+        nro_certificado:
+          type: ["string", "null"]
+        fecha_expedicion:
+          type: ["string", "null"]
+        ubigeo:
+          type: ["string", "null"]
+        source:
           type: ["string", "null"]
         rank_nacional:
           type: ["integer", "null"]

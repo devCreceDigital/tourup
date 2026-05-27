@@ -27,6 +27,8 @@ export const ListOperatorsQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
   "region": zod.coerce.string().optional(),
   "operator_type": zod.coerce.string().optional(),
+  "clase": zod.coerce.string().optional().describe('MINCETUR agency class (e.g. Minorista, Mayorista, Operador de Turismo)'),
+  "modalidad": zod.coerce.string().optional().describe('MINCETUR authorized modality (e.g. Digital, Presencial)'),
   "niche": zod.coerce.string().optional(),
   "min_score": zod.coerce.number().optional(),
   "max_score": zod.coerce.number().optional(),
@@ -56,6 +58,8 @@ export const ListOperatorsResponse = zod.object({
   "website": zod.string().nullish(),
   "logo_url": zod.string().nullish(),
   "description": zod.string().nullish(),
+  "clase": zod.string().nullish(),
+  "modalidad_autorizada": zod.string().nullish(),
   "rank_nacional": zod.number().nullish(),
   "created_at": zod.string()
 })),
@@ -112,6 +116,13 @@ export const GetOperatorResponse = zod.object({
   "description": zod.string().nullish(),
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
+  "clase": zod.string().nullish(),
+  "modalidad_autorizada": zod.string().nullish(),
+  "rep_legal": zod.string().nullish(),
+  "nro_certificado": zod.string().nullish(),
+  "fecha_expedicion": zod.string().nullish(),
+  "ubigeo": zod.string().nullish(),
+  "source": zod.string().nullish(),
   "rank_nacional": zod.number().nullish(),
   "created_at": zod.string(),
   "score_breakdown": zod.object({
@@ -215,6 +226,8 @@ export const UpdateOperatorResponse = zod.object({
   "website": zod.string().nullish(),
   "logo_url": zod.string().nullish(),
   "description": zod.string().nullish(),
+  "clase": zod.string().nullish(),
+  "modalidad_autorizada": zod.string().nullish(),
   "rank_nacional": zod.number().nullish(),
   "created_at": zod.string()
 })

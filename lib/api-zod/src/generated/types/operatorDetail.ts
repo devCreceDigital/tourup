@@ -41,6 +41,20 @@ export interface OperatorDetail {
   /** @nullable */
   email?: string | null;
   /** @nullable */
+  clase?: string | null;
+  /** @nullable */
+  modalidad_autorizada?: string | null;
+  /** @nullable */
+  rep_legal?: string | null;
+  /** @nullable */
+  nro_certificado?: string | null;
+  /** @nullable */
+  fecha_expedicion?: string | null;
+  /** @nullable */
+  ubigeo?: string | null;
+  /** @nullable */
+  source?: string | null;
+  /** @nullable */
   rank_nacional?: number | null;
   created_at: string;
   score_breakdown: TtdmiScore;

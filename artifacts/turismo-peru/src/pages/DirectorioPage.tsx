@@ -215,7 +215,7 @@ export default function DirectorioPage() {
                       </td>
                       <td className="px-4 py-3 hidden lg:table-cell">
                         <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                          {(op as any).clase ?? op.operator_type}
+                          {op.clase ?? op.operator_type}
                         </span>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
@@ -228,10 +228,10 @@ export default function DirectorioPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 hidden xl:table-cell">
-                        {(op as any).modalidad_autorizada && (
+                        {op.modalidad_autorizada && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Wifi className="w-3 h-3 shrink-0" />
-                            {(op as any).modalidad_autorizada}
+                            {op.modalidad_autorizada}
                           </div>
                         )}
                       </td>
