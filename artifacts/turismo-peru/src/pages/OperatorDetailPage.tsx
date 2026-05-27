@@ -132,12 +132,17 @@ export default function OperatorDetailPage() {
               <div className="flex flex-wrap gap-3 mt-3 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <MapPin className="w-3.5 h-3.5" />
-                  {operator.region}{operator.province ? `, ${operator.province}` : ""}
+                  {operator.region}{operator.province ? `, ${operator.province}` : ""}{(operator as any).district && (operator as any).district !== operator.province ? ` — ${(operator as any).district}` : ""}
                 </span>
                 <span className="flex items-center gap-1">
                   <Users className="w-3.5 h-3.5" />
-                  {operator.operator_type}
+                  {(operator as any).clase ?? operator.operator_type}
                 </span>
+                {(operator as any).modalidad_autorizada && (
+                  <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 text-xs border border-blue-200 dark:border-blue-800">
+                    {(operator as any).modalidad_autorizada}
+                  </span>
+                )}
                 {operator.niche && (
                   <span className="px-2 py-0.5 rounded-full bg-muted text-xs">{operator.niche}</span>
                 )}
@@ -145,6 +150,21 @@ export default function OperatorDetailPage() {
                   <span className="text-xs font-mono">RUC: {operator.ruc}</span>
                 )}
               </div>
+
+              {/* MINCETUR official data row */}
+              {((operator as any).rep_legal || (operator as any).nro_certificado || (operator as any).fecha_expedicion) && (
+                <div className="flex flex-wrap gap-4 mt-2 text-xs text-muted-foreground border-t border-border/50 pt-2">
+                  {(operator as any).rep_legal && (
+                    <span><span className="font-medium text-foreground/70">Rep. Legal:</span> {(operator as any).rep_legal}</span>
+                  )}
+                  {(operator as any).nro_certificado && (
+                    <span><span className="font-medium text-foreground/70">Cert. MINCETUR:</span> {(operator as any).nro_certificado}</span>
+                  )}
+                  {(operator as any).fecha_expedicion && (
+                    <span><span className="font-medium text-foreground/70">Expedición:</span> {(operator as any).fecha_expedicion}</span>
+                  )}
+                </div>
+              )}
 
               <div className="flex flex-wrap gap-3 mt-3">
                 {operator.website && (

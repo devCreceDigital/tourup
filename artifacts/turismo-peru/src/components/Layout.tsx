@@ -11,6 +11,7 @@ import {
   Menu,
   X,
   Star,
+  Upload,
 } from "lucide-react";
 
 const navItems = [
@@ -18,6 +19,7 @@ const navItems = [
   { href: "/directorio", icon: List, label: "Directorio" },
   { href: "/rankings", icon: Trophy, label: "Rankings" },
   { href: "/analytics", icon: BarChart3, label: "Analytics" },
+  { href: "/ingesta", icon: Upload, label: "Ingesta de Datos" },
   { href: "/operadores/nuevo", icon: Plus, label: "Agregar Operador" },
 ];
 

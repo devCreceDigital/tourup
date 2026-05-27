@@ -7,21 +7,26 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import LevelBadge from "@/components/LevelBadge";
-import { Search, Filter, CheckCircle, MapPin, Globe, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Filter, CheckCircle, MapPin, Globe, ChevronLeft, ChevronRight, Wifi } from "lucide-react";
 
 const REGIONS = [
-  "Lima", "Cusco", "Arequipa", "Puno", "Ica", "Piura",
-  "Loreto", "Madre de Dios", "La Libertad", "Junín",
+  "Amazonas","Áncash","Apurímac","Arequipa","Ayacucho","Cajamarca","Callao","Cusco",
+  "Huancavelica","Huánuco","Ica","Junín","La Libertad","Lambayeque","Lima","Loreto",
+  "Madre de Dios","Moquegua","Pasco","Piura","Puno","San Martín","Tacna","Tumbes","Ucayali",
 ];
-const OPERATOR_TYPES = [
-  "Agencia Viajes", "Tour Operador", "Hotel Lodge", "Lodge",
-  "Hostal y Tours", "Lodge Amazónico", "Operador Deportivo",
+
+const CLASES = [
+  "Operador de Turismo",
+  "Minorista",
+  "Mayorista",
+  "Minorista, Operador de Turismo",
+  "Mayorista, Minorista",
+  "Mayorista, Operador de Turismo",
+  "Mayorista, Minorista, Operador de Turismo",
 ];
-const NICHES = [
-  "Ecoturismo", "Trekking", "Turismo Aventura", "Turismo Receptivo",
-  "Turismo Cultural", "Lujo", "Turismo Gastronómico", "Turismo Vivencial",
-  "Turismo Amazónico", "Surf y Playa", "Turismo de Naturaleza",
-];
+
+const MODALIDADES = ["Digital", "Presencial", "Digital, Presencial"];
+
 const LEVELS = ["elite", "premium", "advanced", "growing", "emerging", "risk"];
 
 export default function DirectorioPage() {
@@ -29,52 +34,54 @@ export default function DirectorioPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [region, setRegion] = useState("all");
-  const [opType, setOpType] = useState("all");
-  const [niche, setNiche] = useState("all");
+  const [clase, setClase] = useState("all");
+  const [modalidad, setModalidad] = useState("all");
   const [level, setLevel] = useState("all");
   const [sortBy, setSortBy] = useState("ttdmi_score");
   const [page, setPage] = useState(1);
-  const limit = 15;
+  const limit = 20;
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 350);
     return () => clearTimeout(t);
   }, [search]);
 
-  useEffect(() => { setPage(1); }, [debouncedSearch, region, opType, niche, level]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, region, clase, modalidad, level]);
 
-  const params = {
-    ...(debouncedSearch && { search: debouncedSearch }),
-    ...(region !== "all" && { region }),
-    ...(opType !== "all" && { operator_type: opType }),
-    ...(niche !== "all" && { niche }),
-    ...(level !== "all" && { level }),
+  const params: Record<string, string | number> = {
     sort_by: sortBy,
     page,
     limit,
   };
+  if (debouncedSearch) params.search = debouncedSearch;
+  if (region !== "all") params.region = region;
+  if (clase !== "all") params.clase = clase;
+  if (modalidad !== "all") params.modalidad = modalidad;
+  if (level !== "all") params.level = level;
 
-  const { data, isLoading } = useListOperators(params);
+  const { data, isLoading } = useListOperators(params as any);
 
   const totalPages = data ? Math.ceil(data.total / limit) : 1;
 
   const clearFilters = () => {
     setSearch("");
     setRegion("all");
-    setOpType("all");
-    setNiche("all");
+    setClase("all");
+    setModalidad("all");
     setLevel("all");
     setSortBy("ttdmi_score");
     setPage(1);
   };
 
+  const hasFilters = search || region !== "all" || clase !== "all" || modalidad !== "all" || level !== "all";
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Directorio de Operadores</h1>
+          <h1 className="text-2xl font-bold">Directorio de Prestadores Turísticos</h1>
           <p className="text-sm text-muted-foreground">
-            {data?.total ?? "–"} operadores en el sistema
+            {isLoading ? "Cargando..." : `${data?.total.toLocaleString() ?? "–"} agencias y operadores registrados`}
           </p>
         </div>
         <Button onClick={() => setLocation("/operadores/nuevo")} size="sm" data-testid="btn-nuevo-operador">
@@ -88,7 +95,7 @@ export default function DirectorioPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nombre, región..."
+              placeholder="Buscar por nombre comercial, razón social, RUC..."
               className="pl-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -98,43 +105,43 @@ export default function DirectorioPage() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             <Select value={region} onValueChange={setRegion}>
               <SelectTrigger data-testid="filter-region">
-                <SelectValue placeholder="Región" />
+                <SelectValue placeholder="Departamento" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas las regiones</SelectItem>
+                <SelectItem value="all">Todos los departamentos</SelectItem>
                 {REGIONS.map((r) => (
                   <SelectItem key={r} value={r}>{r}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            <Select value={opType} onValueChange={setOpType}>
-              <SelectTrigger data-testid="filter-type">
-                <SelectValue placeholder="Tipo" />
+            <Select value={clase} onValueChange={setClase}>
+              <SelectTrigger data-testid="filter-clase">
+                <SelectValue placeholder="Clase MINCETUR" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los tipos</SelectItem>
-                {OPERATOR_TYPES.map((t) => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                <SelectItem value="all">Todas las clases</SelectItem>
+                {CLASES.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            <Select value={niche} onValueChange={setNiche}>
-              <SelectTrigger data-testid="filter-niche">
-                <SelectValue placeholder="Nicho" />
+            <Select value={modalidad} onValueChange={setModalidad}>
+              <SelectTrigger data-testid="filter-modalidad">
+                <SelectValue placeholder="Modalidad" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los nichos</SelectItem>
-                {NICHES.map((n) => (
-                  <SelectItem key={n} value={n}>{n}</SelectItem>
+                <SelectItem value="all">Todas las modalidades</SelectItem>
+                {MODALIDADES.map((m) => (
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
             <Select value={level} onValueChange={setLevel}>
               <SelectTrigger data-testid="filter-level">
-                <SelectValue placeholder="Nivel" />
+                <SelectValue placeholder="Nivel TTDMI" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los niveles</SelectItem>
@@ -149,41 +156,43 @@ export default function DirectorioPage() {
                 <SelectValue placeholder="Ordenar por" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ttdmi_score">Score TTDMI</SelectItem>
+                <SelectItem value="ttdmi_score">Score TTDMI ↓</SelectItem>
                 <SelectItem value="commercial_name">Nombre A-Z</SelectItem>
-                <SelectItem value="region">Región</SelectItem>
-                <SelectItem value="rank_nacional">Ranking</SelectItem>
+                <SelectItem value="region">Departamento</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div className="flex justify-end">
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
-              <Filter className="w-3 h-3 mr-1" /> Limpiar filtros
-            </Button>
-          </div>
+          {hasFilters && (
+            <div className="flex justify-end">
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
+                <Filter className="w-3 h-3 mr-1" /> Limpiar filtros
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Table */}
-      <div className="rounded-md border border-border overflow-hidden">
+      <div className="rounded-md border border-border overflow-hidden bg-card">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted/50">
+            <thead className="bg-muted/50 border-b border-border">
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground w-8">#</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Operador</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Tipo / Nicho</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Región</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">Clase MINCETUR</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Departamento</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden xl:table-cell">Modalidad</th>
                 <th className="text-center px-4 py-3 font-medium text-muted-foreground">Nivel</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Score</th>
-                <th className="text-center px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">Verificado</th>
+                <th className="text-center px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">Web</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading
-                ? [...Array(8)].map((_, i) => (
+                ? [...Array(10)].map((_, i) => (
                     <tr key={i}>
-                      {[...Array(7)].map((_, j) => (
+                      {[...Array(8)].map((_, j) => (
                         <td key={j} className="px-4 py-3">
                           <Skeleton className="h-4 w-full" />
                         </td>
@@ -201,20 +210,30 @@ export default function DirectorioPage() {
                         {(page - 1) * limit + idx + 1}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-medium truncate max-w-[200px]">{op.commercial_name}</div>
-                        <div className="text-xs text-muted-foreground truncate max-w-[200px]">{op.legal_name}</div>
+                        <div className="font-medium truncate max-w-[220px]">{op.commercial_name}</div>
+                        <div className="text-xs text-muted-foreground truncate max-w-[220px] font-mono">{op.ruc}</div>
                       </td>
-                      <td className="px-4 py-3 hidden md:table-cell">
-                        <div className="text-xs">{op.operator_type}</div>
-                        {op.niche && (
-                          <div className="text-xs text-muted-foreground">{op.niche}</div>
-                        )}
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                          {(op as any).clase ?? op.operator_type}
+                        </span>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
                         <div className="flex items-center gap-1 text-xs">
                           <MapPin className="w-3 h-3 text-muted-foreground shrink-0" />
                           {op.region}
+                          {op.province && op.province !== op.region && (
+                            <span className="text-muted-foreground">· {op.province}</span>
+                          )}
                         </div>
+                      </td>
+                      <td className="px-4 py-3 hidden xl:table-cell">
+                        {(op as any).modalidad_autorizada && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Wifi className="w-3 h-3 shrink-0" />
+                            {(op as any).modalidad_autorizada}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <LevelBadge level={op.level} />
@@ -223,8 +242,8 @@ export default function DirectorioPage() {
                         {op.ttdmi_score.toFixed(1)}
                       </td>
                       <td className="px-4 py-3 text-center hidden lg:table-cell">
-                        {op.verified ? (
-                          <CheckCircle className="w-4 h-4 text-emerald-500 mx-auto" />
+                        {op.website ? (
+                          <Globe className="w-4 h-4 text-blue-500 mx-auto" />
                         ) : (
                           <div className="w-4 h-4 rounded-full border border-muted-foreground/30 mx-auto" />
                         )}
@@ -239,7 +258,7 @@ export default function DirectorioPage() {
         {data && data.total > limit && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/30">
             <p className="text-xs text-muted-foreground">
-              {(page - 1) * limit + 1}–{Math.min(page * limit, data.total)} de {data.total} operadores
+              {(page - 1) * limit + 1}–{Math.min(page * limit, data.total)} de {data.total.toLocaleString()} operadores
             </p>
             <div className="flex items-center gap-1">
               <Button

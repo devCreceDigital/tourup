@@ -3,6 +3,7 @@ import healthRouter from "./health";
 import operatorsRouter from "./operators";
 import rankingsRouter from "./rankings";
 import analyticsRouter from "./analytics";
+import ingestaRouter from "./ingesta";
 
 const router: IRouter = Router();
 
@@ -10,5 +11,6 @@ router.use(healthRouter);
 router.use(operatorsRouter);
 router.use(rankingsRouter);
 router.use(analyticsRouter);
+router.use(ingestaRouter);
 
 export default router;

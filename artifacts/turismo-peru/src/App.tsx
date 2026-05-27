@@ -9,6 +9,7 @@ import RankingsPage from "@/pages/RankingsPage";
 import AnalyticsPage from "@/pages/AnalyticsPage";
 import OperatorDetailPage from "@/pages/OperatorDetailPage";
 import NuevoOperadorPage from "@/pages/NuevoOperadorPage";
+import IngestaPage from "@/pages/IngestaPage";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -25,6 +26,7 @@ function Router() {
         <Route path="/analytics" component={AnalyticsPage} />
         <Route path="/operadores/nuevo" component={NuevoOperadorPage} />
         <Route path="/operadores/:id" component={OperatorDetailPage} />
+        <Route path="/ingesta" component={IngestaPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

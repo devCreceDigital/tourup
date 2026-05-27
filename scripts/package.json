@@ -5,10 +5,15 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
+    "import-mincetur": "tsx ./src/import-mincetur.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "pg": "^8.13.3"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@types/pg": "^8.11.10",
     "tsx": "catalog:"
   }
 }

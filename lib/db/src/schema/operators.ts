@@ -22,6 +22,15 @@ export const operatorsTable = pgTable("operators", {
   phone: text("phone"),
   email: text("email"),
   rankNacional: integer("rank_nacional"),
+  // MINCETUR-specific fields (populated via CSV ingesta)
+  clase: text("clase"),
+  modalidadAutorizada: text("modalidad_autorizada"),
+  repLegal: text("rep_legal"),
+  nroCertificado: text("nro_certificado"),
+  fechaExpedicion: text("fecha_expedicion"),
+  ubigeo: text("ubigeo"),
+  fechaCorte: text("fecha_corte"),
+  source: text("source").notNull().default("manual"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

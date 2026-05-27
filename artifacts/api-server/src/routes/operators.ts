@@ -64,11 +64,12 @@ router.get("/operators", async (req, res) => {
       search,
       region,
       operator_type,
-      niche,
+      clase,
+      modalidad,
+      level,
       min_score,
       max_score,
       verified,
-      level,
       page = "1",
       limit = "20",
       sort_by = "ttdmi_score",
@@ -85,13 +86,15 @@ router.get("/operators", async (req, res) => {
         or(
           ilike(operatorsTable.commercialName, `%${search}%`),
           ilike(operatorsTable.legalName, `%${search}%`),
-          ilike(operatorsTable.region, `%${search}%`)
+          ilike(operatorsTable.region, `%${search}%`),
+          ilike(operatorsTable.ruc, `%${search}%`)
         )
       );
     }
     if (region) conditions.push(ilike(operatorsTable.region, `%${region}%`));
-    if (operator_type) conditions.push(eq(operatorsTable.operatorType, operator_type));
-    if (niche) conditions.push(eq(operatorsTable.niche, niche));
+    if (clase) conditions.push(ilike(sql`COALESCE(${operatorsTable.clase}, ${operatorsTable.operatorType})`, `%${clase}%`));
+    if (operator_type && !clase) conditions.push(ilike(operatorsTable.operatorType, `%${operator_type}%`));
+    if (modalidad) conditions.push(ilike(sql`COALESCE(${operatorsTable.modalidadAutorizada}, '')`, `%${modalidad}%`));
     if (verified !== undefined) conditions.push(eq(operatorsTable.verified, verified === "true"));
     if (level) conditions.push(eq(operatorsTable.level, level));
     if (min_score) conditions.push(gte(sql`${operatorsTable.ttdmiScore}::numeric`, parseFloat(min_score)));
@@ -133,7 +136,9 @@ router.get("/operators", async (req, res) => {
         region: op.region,
         province: op.province,
         district: op.district,
-        operator_type: op.operatorType,
+        operator_type: op.clase ?? op.operatorType,
+        clase: op.clase,
+        modalidad_autorizada: op.modalidadAutorizada,
         niche: op.niche,
         languages: op.languages,
         verified: op.verified,
@@ -189,7 +194,14 @@ router.get("/operators/:id", async (req, res) => {
       region: op.region,
       province: op.province,
       district: op.district,
-      operator_type: op.operatorType,
+      operator_type: op.clase ?? op.operatorType,
+      clase: op.clase,
+      modalidad_autorizada: op.modalidadAutorizada,
+      rep_legal: op.repLegal,
+      nro_certificado: op.nroCertificado,
+      fecha_expedicion: op.fechaExpedicion,
+      ubigeo: op.ubigeo,
+      source: op.source,
       niche: op.niche,
       languages: op.languages,
       verified: op.verified,
