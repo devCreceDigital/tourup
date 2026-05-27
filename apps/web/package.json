@@ -11,6 +11,7 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@next/env": "^16.2.6",
     "@react-google-maps/api": "2.20.8",
     "@totem/shared-kernel": "workspace:*",
     "clsx": "2.1.1",

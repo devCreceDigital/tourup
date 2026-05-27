@@ -14,4 +14,4 @@ create index if not exists identity_refresh_tokens_user_id_idx on identity.refre
 create index if not exists identity_refresh_tokens_tenant_id_idx on identity.refresh_tokens(tenant_id);
 create index if not exists identity_refresh_tokens_expires_at_idx on identity.refresh_tokens(expires_at);
 
-select platform_security.apply_tenant_rls('identity', 'refresh_tokens');
+select platform_security.apply_tenant_rls();

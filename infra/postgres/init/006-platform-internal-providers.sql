@@ -26,5 +26,5 @@ create table if not exists platform.billing_provider_sessions (
 create index if not exists platform_billing_provider_sessions_tenant_id_idx on platform.billing_provider_sessions(tenant_id);
 create index if not exists platform_billing_provider_sessions_kind_status_idx on platform.billing_provider_sessions(kind, status);
 
-select platform_security.apply_tenant_rls('platform', 'event_bus_events');
-select platform_security.apply_tenant_rls('platform', 'billing_provider_sessions');
+select platform_security.apply_tenant_rls();
+select platform_security.apply_tenant_rls();

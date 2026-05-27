@@ -54,7 +54,7 @@ function summarizeToolResult(tool: TravelToolResult): string {
       const items = Array.isArray(r.items) ? r.items : [];
       const names = (items as Record<string, unknown>[])
         .slice(0, 3)
-        .map((p) => String(p.name ?? p.displayName?.text ?? ""))
+        .map((p) => String(p.name ?? (p.displayName as Record<string,unknown>|undefined)?.text ?? ""))
         .filter(Boolean)
         .join(", ");
       return `Atracciones en ${dest}: ${names || "datos no disponibles"}`;
@@ -245,3 +245,4 @@ export function buildWelcomeMessage(userName: string, language: ChatLanguage): s
   const name = userName.trim();
   return name.length > 0 ? `${greeting} ${name}, ${intro}` : `${greeting}, ${intro}`;
 }
+

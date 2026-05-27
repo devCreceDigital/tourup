@@ -3,7 +3,6 @@ import { fileURLToPath } from "node:url";
 import { loadEnvConfig } from "@next/env";
 import type { NextConfig } from "next";
 
-// Monorepo: variables en /workspace/.env (raíz del repo)
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 loadEnvConfig(repoRoot);
 
