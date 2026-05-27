@@ -1,22 +1,26 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: TTDMI - Tourism Trust & Digital Maturity Index API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: operators
+    description: Tourism operator operations
+  - name: rankings
+    description: Ranking and scoring operations
+  - name: analytics
+    description: Analytics and intelligence operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +28,330 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /operators:
+    get:
+      operationId: listOperators
+      tags: [operators]
+      summary: List tourism operators with filters
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: region
+          in: query
+          schema:
+            type: string
+        - name: operator_type
+          in: query
+          schema:
+            type: string
+        - name: niche
+          in: query
+          schema:
+            type: string
+        - name: min_score
+          in: query
+          schema:
+            type: number
+        - name: max_score
+          in: query
+          schema:
+            type: number
+        - name: verified
+          in: query
+          schema:
+            type: boolean
+        - name: level
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            default: ttdmi_score
+      responses:
+        "200":
+          description: List of operators
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperatorListResponse"
+
+    post:
+      operationId: createOperator
+      tags: [operators]
+      summary: Create a new tourism operator
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OperatorInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Operator"
+
+  /operators/{id}:
+    get:
+      operationId: getOperator
+      tags: [operators]
+      summary: Get operator details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Operator details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperatorDetail"
+        "404":
+          description: Not found
+
+    patch:
+      operationId: updateOperator
+      tags: [operators]
+      summary: Update operator
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OperatorUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Operator"
+
+    delete:
+      operationId: deleteOperator
+      tags: [operators]
+      summary: Delete operator
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /operators/{id}/score:
+    get:
+      operationId: getOperatorScore
+      tags: [operators]
+      summary: Get full TTDMI score breakdown for an operator
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Score breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TtdmiScore"
+
+    post:
+      operationId: recalculateScore
+      tags: [operators]
+      summary: Recalculate TTDMI score for an operator
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Recalculated score
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TtdmiScore"
+
+  /rankings:
+    get:
+      operationId: getRankings
+      tags: [rankings]
+      summary: Get rankings with filters
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [nacional, regional, provincial, niche, receptivo, conversion, trust, seo, freshness, hidden_gems]
+          description: Ranking type
+        - name: region
+          in: query
+          schema:
+            type: string
+        - name: niche
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Ranking list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RankingResponse"
+
+  /analytics/summary:
+    get:
+      operationId: getAnalyticsSummary
+      tags: [analytics]
+      summary: Get platform analytics summary
+      responses:
+        "200":
+          description: Platform summary stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsSummary"
+
+  /analytics/score-distribution:
+    get:
+      operationId: getScoreDistribution
+      tags: [analytics]
+      summary: Get TTDMI score distribution by level
+      responses:
+        "200":
+          description: Score distribution
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScoreDistributionItem"
+
+  /analytics/regions:
+    get:
+      operationId: getRegionStats
+      tags: [analytics]
+      summary: Get operator stats by region
+      responses:
+        "200":
+          description: Region stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RegionStat"
+
+  /analytics/niches:
+    get:
+      operationId: getNicheStats
+      tags: [analytics]
+      summary: Get operator stats by niche/type
+      responses:
+        "200":
+          description: Niche stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NicheStat"
+
+  /analytics/hidden-gems:
+    get:
+      operationId: getHiddenGems
+      tags: [analytics]
+      summary: Detect undervalued high-potential operators
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Hidden gem operators
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HiddenGem"
+
+  /analytics/digital-gaps:
+    get:
+      operationId: getDigitalGaps
+      tags: [analytics]
+      summary: Operators with strong offline reputation but poor digitalization
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Digital gap operators
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DigitalGapOperator"
+
+  /analytics/score-trend:
+    get:
+      operationId: getScoreTrend
+      tags: [analytics]
+      summary: Platform-wide score trend over time
+      responses:
+        "200":
+          description: Score trend data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScoreTrendItem"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +359,506 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    Operator:
+      type: object
+      required: [id, legal_name, commercial_name, region, operator_type, ttdmi_score, level, verified, created_at]
+      properties:
+        id:
+          type: integer
+        legal_name:
+          type: string
+        commercial_name:
+          type: string
+        ruc:
+          type: ["string", "null"]
+        region:
+          type: string
+        province:
+          type: ["string", "null"]
+        district:
+          type: ["string", "null"]
+        operator_type:
+          type: string
+        niche:
+          type: ["string", "null"]
+        languages:
+          type: array
+          items:
+            type: string
+        verified:
+          type: boolean
+        ttdmi_score:
+          type: number
+        level:
+          type: string
+        level_label:
+          type: string
+        website:
+          type: ["string", "null"]
+        logo_url:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        rank_nacional:
+          type: ["integer", "null"]
+        created_at:
+          type: string
+
+    OperatorDetail:
+      type: object
+      required: [id, legal_name, commercial_name, region, operator_type, ttdmi_score, level, verified, created_at, score_breakdown]
+      properties:
+        id:
+          type: integer
+        legal_name:
+          type: string
+        commercial_name:
+          type: string
+        ruc:
+          type: ["string", "null"]
+        region:
+          type: string
+        province:
+          type: ["string", "null"]
+        district:
+          type: ["string", "null"]
+        operator_type:
+          type: string
+        niche:
+          type: ["string", "null"]
+        languages:
+          type: array
+          items:
+            type: string
+        verified:
+          type: boolean
+        ttdmi_score:
+          type: number
+        level:
+          type: string
+        level_label:
+          type: string
+        website:
+          type: ["string", "null"]
+        logo_url:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        rank_nacional:
+          type: ["integer", "null"]
+        created_at:
+          type: string
+        score_breakdown:
+          $ref: "#/components/schemas/TtdmiScore"
+        social_profiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/SocialProfile"
+        reviews_summary:
+          $ref: "#/components/schemas/ReviewsSummary"
+        booking_capabilities:
+          $ref: "#/components/schemas/BookingCapabilities"
+        certifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/Certification"
+
+    OperatorListResponse:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Operator"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    OperatorInput:
+      type: object
+      required: [legal_name, commercial_name, region, operator_type]
+      properties:
+        legal_name:
+          type: string
+        commercial_name:
+          type: string
+        ruc:
+          type: string
+        region:
+          type: string
+        province:
+          type: string
+        district:
+          type: string
+        operator_type:
+          type: string
+        niche:
+          type: string
+        languages:
+          type: array
+          items:
+            type: string
+        website:
+          type: string
+        description:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+
+    OperatorUpdate:
+      type: object
+      properties:
+        legal_name:
+          type: string
+        commercial_name:
+          type: string
+        ruc:
+          type: string
+        region:
+          type: string
+        province:
+          type: string
+        district:
+          type: string
+        operator_type:
+          type: string
+        niche:
+          type: string
+        languages:
+          type: array
+          items:
+            type: string
+        website:
+          type: string
+        description:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        verified:
+          type: boolean
+
+    TtdmiScore:
+      type: object
+      required: [operator_id, total_score, reviews_score, social_score, website_score, seo_score, engagement_score, formalidad_score, conversion_score, freshness_score, network_score, validation_factor, level, updated_at]
+      properties:
+        operator_id:
+          type: integer
+        total_score:
+          type: number
+        reviews_score:
+          type: number
+        social_score:
+          type: number
+        website_score:
+          type: number
+        seo_score:
+          type: number
+        engagement_score:
+          type: number
+        formalidad_score:
+          type: number
+        conversion_score:
+          type: number
+        freshness_score:
+          type: number
+        network_score:
+          type: number
+        validation_factor:
+          type: number
+        level:
+          type: string
+        level_label:
+          type: string
+        score_details:
+          type: object
+          additionalProperties: true
+        updated_at:
+          type: string
+
+    SocialProfile:
+      type: object
+      required: [id, platform, followers, engagement_rate, verified]
+      properties:
+        id:
+          type: integer
+        platform:
+          type: string
+        handle:
+          type: ["string", "null"]
+        followers:
+          type: integer
+        engagement_rate:
+          type: number
+        verified:
+          type: boolean
+        last_post_date:
+          type: ["string", "null"]
+        posts_per_week:
+          type: ["number", "null"]
+
+    ReviewsSummary:
+      type: object
+      required: [average_rating, total_reviews, authenticity_score]
+      properties:
+        average_rating:
+          type: number
+        total_reviews:
+          type: integer
+        authenticity_score:
+          type: number
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewSource"
+        sentiment_score:
+          type: number
+        recency_score:
+          type: number
+
+    ReviewSource:
+      type: object
+      required: [source, count, avg_rating]
+      properties:
+        source:
+          type: string
+        count:
+          type: integer
+        avg_rating:
+          type: number
+
+    BookingCapabilities:
+      type: object
+      required: [booking_engine, online_payment, whatsapp_cta, chatbot, lead_form]
+      properties:
+        booking_engine:
+          type: boolean
+        online_payment:
+          type: boolean
+        whatsapp_cta:
+          type: boolean
+        chatbot:
+          type: boolean
+        lead_form:
+          type: boolean
+        response_time_hours:
+          type: ["number", "null"]
+        ota_presence:
+          type: array
+          items:
+            type: string
+
+    Certification:
+      type: object
+      required: [id, name, issuer, verified]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        issuer:
+          type: string
+        verified:
+          type: boolean
+        expiry_date:
+          type: ["string", "null"]
+
+    RankingResponse:
+      type: object
+      required: [type, data, generated_at]
+      properties:
+        type:
+          type: string
+        region:
+          type: ["string", "null"]
+        niche:
+          type: ["string", "null"]
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/RankingEntry"
+        generated_at:
+          type: string
+
+    RankingEntry:
+      type: object
+      required: [rank, operator_id, commercial_name, region, operator_type, ttdmi_score, level, verified]
+      properties:
+        rank:
+          type: integer
+        operator_id:
+          type: integer
+        commercial_name:
+          type: string
+        region:
+          type: string
+        operator_type:
+          type: string
+        niche:
+          type: ["string", "null"]
+        ttdmi_score:
+          type: number
+        level:
+          type: string
+        level_label:
+          type: string
+        verified:
+          type: boolean
+        logo_url:
+          type: ["string", "null"]
+        rank_change:
+          type: ["integer", "null"]
+
+    AnalyticsSummary:
+      type: object
+      required: [total_operators, verified_operators, avg_ttdmi_score, elite_count, premium_count, advanced_count, growing_count, emerging_count, risk_count, regions_covered, top_region, top_niche]
+      properties:
+        total_operators:
+          type: integer
+        verified_operators:
+          type: integer
+        avg_ttdmi_score:
+          type: number
+        elite_count:
+          type: integer
+        premium_count:
+          type: integer
+        advanced_count:
+          type: integer
+        growing_count:
+          type: integer
+        emerging_count:
+          type: integer
+        risk_count:
+          type: integer
+        regions_covered:
+          type: integer
+        top_region:
+          type: string
+        top_niche:
+          type: string
+        digital_gap_operators:
+          type: integer
+        hidden_gems_count:
+          type: integer
+
+    ScoreDistributionItem:
+      type: object
+      required: [level, label, count, avg_score, color]
+      properties:
+        level:
+          type: string
+        label:
+          type: string
+        count:
+          type: integer
+        avg_score:
+          type: number
+        color:
+          type: string
+
+    RegionStat:
+      type: object
+      required: [region, count, avg_score, top_operator]
+      properties:
+        region:
+          type: string
+        count:
+          type: integer
+        avg_score:
+          type: number
+        verified_count:
+          type: integer
+        top_operator:
+          type: string
+        elite_count:
+          type: integer
+
+    NicheStat:
+      type: object
+      required: [niche, count, avg_score]
+      properties:
+        niche:
+          type: string
+        count:
+          type: integer
+        avg_score:
+          type: number
+        top_operator:
+          type: ["string", "null"]
+        growth_trend:
+          type: ["string", "null"]
+
+    HiddenGem:
+      type: object
+      required: [operator_id, commercial_name, region, operator_type, ttdmi_score, potential_score, gap_score, insight]
+      properties:
+        operator_id:
+          type: integer
+        commercial_name:
+          type: string
+        region:
+          type: string
+        operator_type:
+          type: string
+        ttdmi_score:
+          type: number
+        potential_score:
+          type: number
+        gap_score:
+          type: number
+        insight:
+          type: string
+        logo_url:
+          type: ["string", "null"]
+
+    DigitalGapOperator:
+      type: object
+      required: [operator_id, commercial_name, region, operator_type, reviews_score, digital_score, gap, recommendation]
+      properties:
+        operator_id:
+          type: integer
+        commercial_name:
+          type: string
+        region:
+          type: string
+        operator_type:
+          type: string
+        reviews_score:
+          type: number
+        digital_score:
+          type: number
+        gap:
+          type: number
+        recommendation:
+          type: string
+        logo_url:
+          type: ["string", "null"]
+
+    ScoreTrendItem:
+      type: object
+      required: [month, avg_score, total_operators]
+      properties:
+        month:
+          type: string
+        avg_score:
+          type: number
+        total_operators:
+          type: integer
+        elite_count:
+          type: integer
+        premium_count:
+          type: integer
