@@ -7,9 +7,12 @@ out-tsc
 *.tsbuildinfo
 .expo
 .expo-shared
+.next/
+out/
 
 # dependencies
 node_modules
+.pnpm-store/
 
 # IDEs and editors
 /.idea
@@ -36,6 +39,8 @@ npm-debug.log
 yarn-error.log
 testem.log
 /typings
+*.log
+.turbo/
 
 # System Files
 .DS_Store
@@ -47,5 +52,8 @@ Thumbs.db
 # local files
 .local/
 .env
+.env.*
+!.env.example
 
-
+# Build outputs
+dist/

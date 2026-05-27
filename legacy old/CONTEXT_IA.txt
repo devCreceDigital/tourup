@@ -1,0 +1,273 @@
+TOTEM HUB — Contexto del Proyecto
+===================================
+
+VISION
+ToThem HUB es una plataforma SaaS B2B que digitaliza la gestión operativa y comercial de agencias que organizan viajes grupales (escolares, universitarios, corporativos, deportivos y de bienestar). Mercado: España y LATAM, agencias con 200K-5M EUR de facturación, 15-100 viajes/año.
+
+---
+
+STACK TECNOLOGICO
+
+Frontend:    Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS
+Backend:     Django + DRF (Python), Modular Monolith
+ORM:         Django ORM
+Base datos:  Supabase (PostgreSQL), managed=False
+Auth:        Supabase Auth + JWT
+Storage:     Supabase Storage / AWS S3
+Pagos:       MercadoPago (activo), Niubiz (futuro)
+Email:       Resend (MVP)
+Charts:      Recharts
+Icons:       Lucide React
+Infra:       Docker + docker-compose
+
+---
+
+ARQUITECTURA: MODULAR MONOLITH
+
+Una Django app por dominio funcional. Comunicación entre apps por imports directos Python (sin buses, sin colas, sin REST interno). Equipo de 3 devs.
+
+Estructura backend:
+  backend/
+    core/                -> Utilidades compartidas (NO es una Django app)
+      throttling.py      -> Clases DRF throttle: Login, Upload, Pago, Burst, Sustained
+      file_validators.py -> validate_upload(): extensión + tamaño + magic bytes MIME
+      permissions.py     -> IsSuperAdmin, IsAdmin, IsOwnerOrAdmin, TenantIsolationPermission
+
+    apps/
+      audit/             -> Audit logs inmutables (managed=True, tabla audit_logs)
+        models.py        -> AuditLog: append-only, no update/delete
+        middleware.py    -> log_audit() + AuditMiddleware (captura 403s)
+        views.py         -> AuditLogListView (superadmin only)
+        admin.py         -> Read-only en Django admin (superadmin only)
+        migrations/      -> 0001_initial.py
+
+      usuarios/          -> Auth, perfiles, roles RBAC
+      catalogo/          -> Destinos, actividades, alojamientos, complementos
+      itinerarios/       -> Itinerarios día a día, versiones, eventos
+      viajes/            -> Viajes, tarifas, config, landing
+      inscripciones/     -> Registro de viajeros, datos salud
+      pagos/             -> Cuotas, pagos online/manual, pasarela
+      documentos/        -> Subida, validación, checklist
+      notificaciones/    -> Plantillas, campañas, automáticas
+      planes/            -> Suscripciones, servicios, renovación
+      tenancy/           -> Multi-tenant
+      soporte/           -> Módulo de soporte
+      dashboard_admin/   -> Dashboard custom en /admin/dashboard/
+
+---
+
+ROLES RBAC
+
+admin:   CRUD completo, aprobar docs, pagos manuales, campañas, reportes
+viajero: Ver inscripción, pagar cuotas, subir docs, ver itinerario, ver listado de su grupo, exportar PDF
+
+Nota: los roles "profesor" y "alumno" se unifican en un solo rol "viajero".
+      No hay distinción de permisos entre responsable de grupo y viajero.
+
+---
+
+MODELOS CLAVE (managed=False, tablas en Supabase)
+
+Viaje:           id(UUID), nombre, estado, fecha_inicio, cupos, responsable, configuracion(JSON)
+Reserva:         id(UUID), codigo(unique), cliente, viaje(FK), pax, monto, estado
+Viajero:         id(UUID), nombre, grupo, pago, documentos
+Perfil:          id(UUID->auth.users), email, nombre, rol
+Inscripcion:     viajero, viaje, datos_personales{}, datos_salud{}, tipo_habitacion, estado
+Cuota:           plan_pago, nombre, monto, fecha_vencimiento, obligatoria
+PagoCuota:       inscripcion, cuota, monto_pagado, metodo_pago, referencia, estado
+DocumentoViajero: inscripcion, documento_requerido, archivo_url, estado, motivo_rechazo
+
+---
+
+ESTADOS DEL SISTEMA
+
+EstadoViaje:       borrador | confirmado | publicado | en_operacion | cerrado | cancelado
+EstadoInscripcion: pre_inscrito | pendiente_pago | confirmado | cancelado
+EstadoPago:        pendiente | parcial | completo
+EstadoCuota:       pendiente | pagada | vencida
+EstadoDocumentos:  completo | incompleto | faltante | pendiente
+AppRole:           admin | profesor | alumno
+
+---
+
+DESIGN SYSTEM
+
+Colores:
+  Primary:    #5B4FE8  (violeta índigo) - botones, tabs activos
+  Accent:     #00D4C8  (teal) - highlights, CTAs secundarios
+  Dark navy:  #1E1B4B  - sidebar
+  Banner:     #2D2D6E  - trip banner
+  Success:    #1A8A4A  (bg #E3F9EC)
+  Warning:    #F59E0B  (bg #FFF3E0)
+  Danger:     #EF4444  (bg #FDE2E2)
+  BG general: #F4F5F7
+  Card:       #FFFFFF  con border #E0E4EF radius 8px
+
+Layout backoffice:
+  Topbar (blanco, border-bottom)
+    Sidebar 72px (#1E1B4B)
+      Trip Banner (#2D2D6E)
+        Nav Tabs (Viaje | Config | Descripción | Tarifas | Inscripciones | Pagos | Docs | Rooming)
+          Contenido del tab activo
+
+Regla visual: Verde=completo, Amarillo=pendiente, Rojo=faltante
+
+---
+
+REGLAS DE DESARROLLO
+
+Frontend:
+  - Next.js App Router con Server Components donde sea posible
+  - Tailwind CSS con design tokens definidos arriba
+  - Tipos TypeScript estrictos en types/index.ts
+  - Cliente API centralizado en lib/api.ts
+  - Lucide React para iconos, Recharts para gráficos
+
+Backend:
+  - DRF con ViewSets y Serializers
+  - managed=False en todos los modelos
+  - UUID como primary keys
+  - JSONField para configs flexibles
+  - Utilidades compartidas en core/
+  - Filtros y paginación en todos los endpoints de listado
+  - Permisos por rol en cada ViewSet usando core/permissions.py
+
+General:
+  - Commits en español
+  - Docker para desarrollo local
+  - Variables en .env (nunca hardcoded)
+  - No over-engineering: abstraer solo si se necesita 3+ veces
+
+---
+
+MVP 1 - MODULOS EN SCOPE
+
+Incluido:
+  Catalogo · Itinerarios · Viajes · Landing publica · Inscripcion online
+  Pagos online/manuales · Documentacion · Panel admin · Notificaciones automaticas
+
+Excluido del MVP1:
+  Rooming automatico, transporte, mecenas/wallet, reportes avanzados, app movil
+
+---
+
+FLUJO ADMIN - CREAR VIAJE
+1. Login -> Backoffice
+2. Viajes -> Crear nuevo viaje
+3. Seleccionar itinerario base
+4. Definir nombre, fechas, codigo, slug, responsable
+5. Configurar tipos de habitacion y cupos
+6. Definir plan de pagos (cuotas y vencimientos)
+7. Activar complementos con precios
+8. Definir documentos requeridos
+9. Configurar contenido de landing
+10. Publicar viaje -> genera URL publica
+
+FLUJO VIAJERO - INSCRIPCION Y PAGO
+1. Abrir URL publica del viaje
+2. Clic "Inscribirme"
+3. Crear cuenta o iniciar sesion
+4. Completar datos personales y de salud
+5. Seleccionar tipo de habitacion
+6. Ver plan de pagos y complementos
+7. Confirmar inscripcion
+8. Pagar con tarjeta via pasarela
+9. Confirmacion inmediata + email
+10. Acceso a area privada (pagos, documentos pendientes)
+
+---
+
+PANEL ADMIN DJANGO (JAZZMIN)
+=============================
+
+Libreria: django-jazzmin >= 3.0
+Acceso:   /admin/
+Tema:     "darkly" (dark mode), sidebar dark-primary, navbar dark y fijo
+
+Configuracion JAZZMIN_SETTINGS relevante:
+  site_header:  "Totem HUB Admin"
+  site_title:   "Totem HUB"
+  copyright:    "Totem HUB © 2026"
+  theme:        darkly
+  Sidebar:      fijo, dark
+  Navbar:       dark, fijo, sin borde
+  Iconos:       Font Awesome (36 iconos configurados por app/modelo)
+  Orden apps:   tenancy, planes, usuarios, viajes, soporte, itinerarios, catalogo, inscripciones, pagos, documentos
+
+Links rapidos configurados:
+  - "Ver sitio publico" -> /viajes
+  - "Dashboard metricas" -> /admin/dashboard_admin/
+
+APPS REGISTRADAS EN ADMIN
+
+usuarios/admin.py
+  Modelo: Perfil
+  Campos: nombre, email, rol_badge (colores: superadmin=#7c3aed, admin=#2563eb, viajero=#6b7280)
+  Readonly: id, created_at
+  Fieldsets: Datos personales | Tenant | Auditoria
+
+viajes/admin.py
+  Modelo: Viaje
+  Campos: nombre, codigo, estado_badge, fecha_inicio, fecha_fin, cupos, moneda, tenant_id
+  Acciones: publicar_viajes | pasar_a_borrador | cancelar_viajes
+  Estado badge: 6 colores (borrador, confirmado, publicado, en_operacion, cerrado, cancelado)
+
+planes/admin.py
+  Modelo: Plan
+  Campos: name, price_monthly, price_yearly, max_trips, max_inscriptions, activo_badge
+
+catalogo/admin.py
+  Modelos: Destino, Actividad, Alojamiento, Complemento
+  Destino: con inlines de Actividades y Alojamientos
+  Actividad: categoria_badge con 5 colores (cultural, deportiva, gastronomica, naturaleza, otro)
+
+pagos/admin.py
+  Modelos: Cuota, Pago
+  Cuota: con inline PagoInline
+  Pago: estado_badge (pendiente, verificado, rechazado), id_corto (UUID abreviado)
+
+documentos/admin.py
+  Modelo: DocumentoViajero
+  estado_badge: 4 colores (pendiente, en_revision, aprobado, rechazado)
+  Fieldsets: Documento | Revision | Archivo | Metadata (collapse) | Auditoria
+
+itinerarios/admin.py
+  Modelos: Itinerario, DiaItinerario
+  Inlines anidados: DiaItinerarioInline -> EventoItinerarioInline
+
+inscripciones/admin.py
+  Modelo: Inscripcion
+  estado_badge: 4 colores (pre_inscrito, pendiente_pago, confirmado, cancelado)
+  Acciones: confirmar_inscripciones | cancelar_inscripciones
+
+tenancy/admin.py
+  Modelo: Tenant
+  status_badge: active=verde, inactive=gris, suspended=rojo
+  Acciones: activar_tenants | suspender_tenants | desactivar_tenants
+
+dashboard_admin/admin.py
+  Clase: TotemAdminSite (extiende admin.AdminSite)
+  URL custom: /admin/dashboard/
+  Vista: estadisticas globales de 8 modelos + top 5 viajes/inscripciones/pagos recientes
+  Template: admin/dashboard.html
+
+PATRON DE BADGES (consistente en todos los admins):
+  Todos los campos de estado usan metodos @admin.display que retornan HTML con
+  span coloreado. Color segun estado: verde=activo/aprobado, gris=inactivo,
+  rojo=cancelado/rechazado, amarillo=pendiente, azul=en_revision.
+
+---
+
+GLOSARIO
+
+Viaje:        Salida comercial concreta con fechas, tarifas y viajeros
+Itinerario:   Plantilla reutilizable de programa dia a dia
+Inscripcion:  Registro de un viajero a un viaje especifico
+Cuota:        Fraccion del pago total con vencimiento
+Complemento:  Servicio adicional opcional (seguro, menu, actividad extra)
+Rooming list: Distribucion de viajeros en habitaciones de hotel
+Responsable:  Profesor/coordinador que supervisa un grupo de viajeros
+Mecenas:      Persona que dona dinero para financiar el viaje de un viajero
+Wallet:       Monedero virtual del viajero donde se acreditan donaciones
+Landing:      Pagina publica del viaje con info comercial y boton de inscripcion
+Slug:         Identificador URL-friendly del viaje (ej: viaje-cusco-2026)

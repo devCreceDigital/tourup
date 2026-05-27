@@ -1,0 +1,453 @@
+.aiShell {
+  display: flex;
+  height: 100dvh;
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.aiSidebar {
+  width: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-bgcard);
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.aiSidebarLogo {
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.aiLogoMark {
+  font-size: 22px;
+  color: var(--color-danger);
+}
+
+.aiSidebarNav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.aiSidebarBottom {
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.aiSidebarIcon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-textsecondary);
+  transition: background 0.15s, color 0.15s;
+}
+
+.aiSidebarIcon:hover {
+  background: var(--color-bgcardalt);
+  color: var(--color-text);
+}
+
+.aiSidebarIconActive {
+  background: var(--color-bgcardalt);
+  color: var(--color-text);
+}
+
+.aiChatPanel {
+  width: 380px;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-bgcard);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.aiChatHeader {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.aiChatHeaderTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.aiSparkleIcon {
+  color: var(--color-danger);
+}
+
+.aiChatTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.aiHeaderPills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.aiPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-textsecondary);
+  cursor: default;
+  line-height: 1.2;
+}
+
+.aiPillLang {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.aiPillLang:hover {
+  border-color: var(--color-borderinput);
+  color: var(--color-text);
+}
+
+.aiTabs {
+  display: flex;
+  gap: 6px;
+}
+
+.aiTab {
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-textsecondary);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.aiTab:hover {
+  color: var(--color-text);
+}
+
+.aiTabActive {
+  background: var(--color-bgcardalt);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.aiAlert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.aiAlertSuccess {
+  background: var(--color-successbg);
+  color: var(--color-success);
+}
+
+.aiAlertError {
+  background: var(--color-dangerbg);
+  color: var(--color-danger);
+}
+
+.aiAlert button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+}
+
+.aiAlertRetry {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.aiMessagesScroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  scroll-behavior: smooth;
+}
+
+.aiComposerWrap {
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.aiEmptyState {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--color-textsecondary);
+}
+
+.aiEmptyTitle {
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.aiEmptyText {
+  font-size: 12px;
+}
+
+/* ── Workspace Panel (replaces map-only panel) ─────────────────── */
+
+.aiWorkspacePanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.aiWorkspaceHeader {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bgcard);
+  flex-shrink: 0;
+}
+
+.aiWorkspaceTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-textsecondary);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  position: relative;
+}
+
+.aiWorkspaceTab:hover {
+  color: var(--color-text);
+}
+
+.aiWorkspaceTabActive {
+  background: var(--color-bgcardalt);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.aiWorkspaceTabDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  display: inline-block;
+  margin-left: 1px;
+}
+
+.aiWorkspaceContent {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.aiWorkspaceMap {
+  position: relative;
+  height: 100%;
+}
+
+.aiWorkspaceEmpty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.aiWorkspaceEmptyIcon {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.aiWorkspaceEmptyTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.aiWorkspaceEmptyText {
+  font-size: 12px;
+  color: var(--color-textsecondary);
+  max-width: 220px;
+  line-height: 1.5;
+}
+
+/* map panel styles shared by MapPanel.tsx */
+.aiMapPanel {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #dce9d4;
+  min-width: 0;
+}
+
+.aiMapSvg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.aiMapPlaceholder {
+  position: absolute;
+  inset: 0;
+}
+
+.aiMapOverlayTop {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+
+.aiMapPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--color-bgcard);
+  border: 1px solid var(--color-border);
+  color: var(--color-textsecondary);
+  white-space: nowrap;
+}
+
+.aiMapPillCta {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: white;
+  cursor: pointer;
+  font-weight: 700;
+  transition: opacity 0.15s;
+}
+
+.aiMapPillCta:hover {
+  opacity: 0.9;
+}
+
+.aiMapZoom {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 10;
+}
+
+.aiMapZoomBtn {
+  width: 32px;
+  height: 32px;
+  background: var(--color-bgcard);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--color-text);
+  line-height: 1;
+  transition: background 0.15s;
+}
+
+.aiMapZoomBtn:hover {
+  background: var(--color-bgcardalt);
+}
+
+.aiMapMatchCard {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  background: var(--color-bgcard);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  max-width: 260px;
+  z-index: 10;
+  box-shadow: var(--shadow-card);
+}
+
+.aiMapMatchName {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 2px;
+}
+
+.aiMapMatchDetail {
+  font-size: 12px;
+  color: var(--color-textsecondary);
+}
+
+@media (max-width: 900px) {
+  .aiMapPanel,
+  .aiWorkspacePanel {
+    display: none;
+  }
+  .aiChatPanel {
+    width: 100%;
+    flex: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .aiSidebar {
+    display: none;
+  }
+}
+

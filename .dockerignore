@@ -1,0 +1,7 @@
+.git
+ANtigua estructura completa
+node_modules
+dist
+.next
+coverage
+*.log

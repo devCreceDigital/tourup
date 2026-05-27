@@ -1,0 +1,76 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  runtime             = "nodejs"
+  moduleFormat       = "esm"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["trips"]
+}
+
+model TripRecord {
+  id             String   @id @db.Uuid
+  tenantId       String?  @map("tenant_id") @db.Uuid
+  status         String
+  version        Int      @default(1)
+  idempotencyKey String?  @unique @map("idempotency_key")
+  payload        Json
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@schema("trips")
+  @@map("trips")
+}
+
+model OutboxEvent {
+  id            String   @id @db.Uuid
+  aggregateId   String   @map("aggregate_id") @db.Uuid
+  tenantId      String?  @map("tenant_id") @db.Uuid
+  eventType     String   @map("event_type")
+  payload       Json
+  occurredAt    DateTime @default(now()) @map("occurred_at")
+  processedAt   DateTime? @map("processed_at")
+
+  @@index([tenantId])
+  @@index([processedAt])
+  @@schema("trips")
+  @@map("trips_outbox")
+}
+
+model TripLanding {
+  id          String   @id @db.Uuid
+  tripId      String   @unique @map("trip_id") @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  title       String
+  subtitle    String?
+  heroImage   String?  @map("hero_image")
+  content     Json
+  publishedAt DateTime? @map("published_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@schema("trips")
+  @@map("trip_landings")
+}
+
+model TripOperation {
+  id          String   @id @db.Uuid
+  tripId      String   @map("trip_id") @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  type        String
+  title       String
+  startsAt    DateTime? @map("starts_at")
+  endsAt      DateTime? @map("ends_at")
+  payload     Json
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId, tripId])
+  @@index([startsAt])
+  @@schema("trips")
+  @@map("trip_operations")
+}

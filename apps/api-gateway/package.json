@@ -1,0 +1,29 @@
+{
+  "name": "@totem/api-gateway",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.js",
+  "types": "dist/main.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/main.ts",
+    "start": "node dist/main.js",
+    "test": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=11.3.0"
+  },
+  "dependencies": {
+    "@totem/service-runtime": "workspace:*",
+    "jose": "^6.2.3",
+    "zod": "^4.4.3"
+  }
+}

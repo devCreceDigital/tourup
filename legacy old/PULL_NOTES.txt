@@ -1,0 +1,43 @@
+NOTAS PARA EL EQUIPO — git pull main
+======================================
+
+Que hizo este PR:
+  - Unificacion de roles: "profesor" y "alumno" ahora son un unico rol "viajero"
+  - Nueva app: apps/audit/ (audit logs inmutables)
+  - Nueva carpeta: core/ (throttling, file_validators, permissions)
+  - Rate limiting en endpoints criticos (login, pagos, documentos, inscripciones)
+  - Validacion de archivos por extension en subida de documentos
+  - API docs en /api/docs/ (Swagger) y /api/docs/redoc/
+  - Headers de seguridad (HSTS, X-Frame-Options, Secure cookies)
+  - drf-spectacular anadido a requirements.txt
+  - django-jazzmin anadido a requirements.txt
+
+---
+
+ACCION REQUERIDA despues del pull
+===================================
+
+1. Reconstruir el contenedor backend (nuevas dependencias en requirements.txt):
+
+   docker-compose build backend
+
+2. Levantar los servicios:
+
+   docker-compose up -d
+
+3. Correr la migracion (crea la tabla audit_logs en tu postgres local):
+
+   docker exec totem_backend python manage.py migrate
+
+Eso es todo. La tabla audit_logs en Supabase (produccion) ya fue creada.
+
+---
+
+CAMBIOS QUE PUEDEN ROMPER ALGO
+================================
+
+- Si tienes codigo que usa rol "profesor" o "alumno" en algun branch,
+  cambialo a "viajero". Esos roles ya no existen.
+
+- La funcion _current_role() en todas las vistas ahora solo retorna:
+  "superadmin" | "admin" | "viajero"

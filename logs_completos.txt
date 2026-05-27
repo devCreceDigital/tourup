@@ -1,0 +1,376 @@
+enrollments-1  | node:fs:1350
+enrollments-1  |   const result = binding.mkdir(
+enrollments-1  |                          ^
+enrollments-1  | 
+enrollments-1  | Error: EACCES: permission denied, mkdir '/nonexistent/.cache/node/corepack/v1'
+enrollments-1  |     at mkdirSync (node:fs:1350:26)
+enrollments-1  |     at getTemporaryFolder (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:12815:27)
+enrollments-1  |     at download (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13131:21)
+enrollments-1  |     at installVersion (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13229:61)
+enrollments-1  |     at async Engine.ensurePackageManager (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13744:32)
+assistant-1    | node:fs:1350
+assistant-1    |   const result = binding.mkdir(
+subscriptions-1  | node:fs:1350
+enrollments-1  |     at async Engine.executePackageManagerRequest (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13855:25)
+enrollments-1    |     at async Object.runMain (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:14566:7) {
+enrollments-1    |   errno: -13,
+enrollments-1    |   code: 'EACCES',
+enrollments-1    |   syscall: 'mkdir',
+enrollments-1    |   path: '/nonexistent/.cache/node/corepack/v1'
+enrollments-1    | }
+enrollments-1    | 
+enrollments-1    | Node.js v24.16.0
+catalog-1      | node:fs:1350
+subscriptions-1  |   const result = binding.mkdir(
+subscriptions-1  |                          ^
+subscriptions-1  | 
+subscriptions-1  | Error: EACCES: permission denied, mkdir '/nonexistent/.cache/node/corepack/v1'
+subscriptions-1  |     at mkdirSync (node:fs:1350:26)
+subscriptions-1  |     at getTemporaryFolder (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:12815:27)
+subscriptions-1  |     at download (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13131:21)
+subscriptions-1  |     at installVersion (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13229:61)
+subscriptions-1  |     at async Engine.ensurePackageManager (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13744:32)
+subscriptions-1  |     at async Engine.executePackageManagerRequest (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13855:25)
+rooming-1        | node:fs:1350
+assistant-1      |                          ^
+catalog-1        |   const result = binding.mkdir(
+catalog-1        |                          ^
+api-gateway-1    | Preparing pnpm@11.3.0 for immediate activation...
+catalog-1        | 
+catalog-1        | Error: EACCES: permission denied, mkdir '/nonexistent/.cache/node/corepack/v1'
+catalog-1        |     at mkdirSync (node:fs:1350:26)
+catalog-1        |     at getTemporaryFolder (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:12815:27)
+catalog-1        |     at download (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13131:21)
+catalog-1        |     at installVersion (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13229:61)
+catalog-1        |     at async Engine.ensurePackageManager (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13744:32)
+catalog-1        |     at async Engine.executePackageManagerRequest (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13855:25)
+catalog-1        |     at async Object.runMain (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:14566:7) {
+catalog-1        |   errno: -13,
+catalog-1        |   code: 'EACCES',
+catalog-1        |   syscall: 'mkdir',
+catalog-1        |   path: '/nonexistent/.cache/node/corepack/v1'
+catalog-1        | }
+catalog-1        | 
+catalog-1        | Node.js v24.16.0
+subscriptions-1  |     at async Object.runMain (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:14566:7) {
+assistant-1      | 
+assistant-1      | Error: EACCES: permission denied, mkdir '/nonexistent/.cache/node/corepack/v1'
+assistant-1      |     at mkdirSync (node:fs:1350:26)
+subscriptions-1  |   errno: -13,
+subscriptions-1  |   code: 'EACCES',
+subscriptions-1  |   syscall: 'mkdir',
+subscriptions-1  |   path: '/nonexistent/.cache/node/corepack/v1'
+rooming-1        |   const result = binding.mkdir(
+platform-1       | node:fs:1350
+rooming-1        |                          ^
+identity-1       | node:fs:1350
+subscriptions-1  | }
+subscriptions-1  | 
+subscriptions-1  | Node.js v24.16.0
+api-gateway-1  | Scope: all 20 workspace projects
+api-gateway-1    | [ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY] Aborted removal of modules directory due to no TTY
+api-gateway-1    | 
+api-gateway-1    | If you are running pnpm in CI, set the CI environment variable to "true", or set "confirmModulesPurge" to "false".
+postgres-1       | The files belonging to this database system will be owned by user "postgres".
+platform-1       |   const result = binding.mkdir(
+platform-1       |                          ^
+platform-1       | 
+platform-1       | Error: EACCES: permission denied, mkdir '/nonexistent/.cache/node/corepack/v1'
+platform-1       |     at mkdirSync (node:fs:1350:26)
+platform-1       |     at getTemporaryFolder (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:12815:27)
+notifications-1  | node:fs:1350
+documents-1      | node:fs:1350
+assistant-1      |     at getTemporaryFolder (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:12815:27)
+assistant-1      |     at download (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13131:21)
+postgres-1       | This user must also own the server process.
+identity-1       |   const result = binding.mkdir(
+identity-1       |                          ^
+identity-1       | 
+identity-1       | Error: EACCES: permission denied, mkdir '/nonexistent/.cache/node/corepack/v1'
+identity-1       |     at mkdirSync (node:fs:1350:26)
+identity-1       |     at getTemporaryFolder (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:12815:27)
+postgres-1       | 
+postgres-1       | The database cluster will be initialized with locale "en_US.utf8".
+postgres-1       | The default database encoding has accordingly been set to "UTF8".
+postgres-1       | The default text search configuration will be set to "english".
+rooming-1        | 
+itineraries-1    | node:fs:1350
+rooming-1        | Error: EACCES: permission denied, mkdir '/nonexistent/.cache/node/corepack/v1'
+postgres-1       | 
+postgres-1       | Data page checksums are disabled.
+documents-1      |   const result = binding.mkdir(
+documents-1      |                          ^
+documents-1      | 
+documents-1      | Error: EACCES: permission denied, mkdir '/nonexistent/.cache/node/corepack/v1'
+identity-1       |     at download (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13131:21)
+identity-1       |     at installVersion (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13229:61)
+assistant-1      |     at installVersion (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13229:61)
+assistant-1      |     at async Engine.ensurePackageManager (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13744:32)
+itineraries-1    |   const result = binding.mkdir(
+itineraries-1    |                          ^
+itineraries-1    | 
+itineraries-1    | Error: EACCES: permission denied, mkdir '/nonexistent/.cache/node/corepack/v1'
+postgres-1       | 
+postgres-1       | fixing permissions on existing directory /var/lib/postgresql/data ... ok
+postgres-1       | creating subdirectories ... ok
+postgres-1       | selecting dynamic shared memory implementation ... posix
+postgres-1       | selecting default max_connections ... 100
+postgres-1       | selecting default shared_buffers ... 128MB
+postgres-1       | selecting default time zone ... UTC
+postgres-1       | creating configuration files ... ok
+postgres-1       | running bootstrap script ... ok
+postgres-1       | sh: locale: not found
+postgres-1       | 2026-05-24 17:10:40.938 UTC [36] WARNING:  no usable system locales were found
+rooming-1        |     at mkdirSync (node:fs:1350:26)
+rooming-1        |     at getTemporaryFolder (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:12815:27)
+rooming-1        |     at download (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13131:21)
+rooming-1        |     at installVersion (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13229:61)
+rooming-1        |     at async Engine.ensurePackageManager (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13744:32)
+rooming-1        |     at async Engine.executePackageManagerRequest (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13855:25)
+support-1        | node:fs:1350
+support-1        |   const result = binding.mkdir(
+support-1        |                          ^
+support-1        | 
+platform-1       |     at download (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13131:21)
+platform-1       |     at installVersion (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13229:61)
+documents-1      |     at mkdirSync (node:fs:1350:26)
+documents-1      |     at getTemporaryFolder (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:12815:27)
+documents-1      |     at download (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13131:21)
+documents-1      |     at installVersion (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13229:61)
+documents-1      |     at async Engine.ensurePackageManager (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13744:32)
+support-1        | Error: EACCES: permission denied, mkdir '/nonexistent/.cache/node/corepack/v1'
+assistant-1      |     at async Engine.executePackageManagerRequest (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13855:25)
+assistant-1      |     at async Object.runMain (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:14566:7) {
+assistant-1      |   errno: -13,
+assistant-1      |   code: 'EACCES',
+assistant-1      |   syscall: 'mkdir',
+assistant-1      |   path: '/nonexistent/.cache/node/corepack/v1'
+assistant-1      | }
+identity-1       |     at async Engine.ensurePackageManager (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13744:32)
+identity-1       |     at async Engine.executePackageManagerRequest (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13855:25)
+identity-1       |     at async Object.runMain (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:14566:7) {
+identity-1       |   errno: -13,
+identity-1       |   code: 'EACCES',
+identity-1       |   syscall: 'mkdir',
+identity-1       |   path: '/nonexistent/.cache/node/corepack/v1'
+identity-1       | }
+identity-1       | 
+identity-1       | Node.js v24.16.0
+postgres-1       | performing post-bootstrap initialization ... ok
+postgres-1       | initdb: warning: enabling "trust" authentication for local connections
+postgres-1       | initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+postgres-1       | syncing data to disk ... ok
+postgres-1       | 
+postgres-1       | 
+postgres-1       | Success. You can now start the database server using:
+postgres-1       | 
+postgres-1       |     pg_ctl -D /var/lib/postgresql/data -l logfile start
+postgres-1       | 
+postgres-1       | waiting for server to start....2026-05-24 17:10:41.664 UTC [42] LOG:  starting PostgreSQL 16.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+postgres-1       | 2026-05-24 17:10:41.666 UTC [42] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+postgres-1       | 2026-05-24 17:10:41.675 UTC [45] LOG:  database system was shut down at 2026-05-24 17:10:41 UTC
+postgres-1       | 2026-05-24 17:10:41.682 UTC [42] LOG:  database system is ready to accept connections
+postgres-1       |  done
+postgres-1       | server started
+postgres-1       | CREATE DATABASE
+postgres-1       | 
+platform-1       |     at async Engine.ensurePackageManager (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13744:32)
+platform-1       |     at async Engine.executePackageManagerRequest (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13855:25)
+platform-1       |     at async Object.runMain (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:14566:7) {
+platform-1       |   errno: -13,
+platform-1       |   code: 'EACCES',
+platform-1       |   syscall: 'mkdir',
+postgres-1       | 
+postgres-1       | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/001-create-service-schemas.sql
+postgres-1       | CREATE SCHEMA
+postgres-1       | CREATE SCHEMA
+postgres-1       | CREATE SCHEMA
+postgres-1       | CREATE SCHEMA
+postgres-1       | CREATE SCHEMA
+postgres-1       | CREATE SCHEMA
+postgres-1       | CREATE SCHEMA
+postgres-1       | CREATE SCHEMA
+postgres-1       | CREATE SCHEMA
+postgres-1       | CREATE SCHEMA
+postgres-1       | CREATE SCHEMA
+postgres-1       | CREATE SCHEMA
+postgres-1       | CREATE SCHEMA
+postgres-1       | CREATE SCHEMA
+postgres-1       | CREATE SCHEMA
+postgres-1       | 
+postgres-1       | 
+postgres-1       | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/002-rls-foundation.sql
+postgres-1       | CREATE SCHEMA
+itineraries-1    |     at mkdirSync (node:fs:1350:26)
+itineraries-1    |     at getTemporaryFolder (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:12815:27)
+itineraries-1    |     at download (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13131:21)
+itineraries-1    |     at installVersion (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13229:61)
+itineraries-1    |     at async Engine.ensurePackageManager (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13744:32)
+itineraries-1    |     at async Engine.executePackageManagerRequest (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13855:25)
+audit-1          | node:fs:1350
+rooming-1        |     at async Object.runMain (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:14566:7) {
+rooming-1        |   errno: -13,
+rooming-1        |   code: 'EACCES',
+rooming-1        |   syscall: 'mkdir',
+support-1        |     at mkdirSync (node:fs:1350:26)
+support-1        |     at getTemporaryFolder (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:12815:27)
+support-1        |     at download (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13131:21)
+support-1        |     at installVersion (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13229:61)
+support-1        |     at async Engine.ensurePackageManager (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13744:32)
+support-1        |     at async Engine.executePackageManagerRequest (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13855:25)
+support-1        |     at async Object.runMain (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:14566:7) {
+support-1        |   errno: -13,
+support-1        |   code: 'EACCES',
+support-1        |   syscall: 'mkdir',
+tenancy-1        | node:fs:1350
+notifications-1  |   const result = binding.mkdir(
+payments-1       | node:fs:1350
+payments-1       |   const result = binding.mkdir(
+trips-1          | node:fs:1350
+trips-1          |   const result = binding.mkdir(
+notifications-1  |                          ^
+notifications-1  | 
+notifications-1  | Error: EACCES: permission denied, mkdir '/nonexistent/.cache/node/corepack/v1'
+rooming-1        |   path: '/nonexistent/.cache/node/corepack/v1'
+audit-1          |   const result = binding.mkdir(
+rooming-1        | }
+audit-1          |                          ^
+support-1        |   path: '/nonexistent/.cache/node/corepack/v1'
+support-1        | }
+support-1        | 
+support-1        | Node.js v24.16.0
+notifications-1  |     at mkdirSync (node:fs:1350:26)
+notifications-1  |     at getTemporaryFolder (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:12815:27)
+notifications-1  |     at download (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13131:21)
+notifications-1  |     at installVersion (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13229:61)
+postgres-1       | CREATE FUNCTION
+payments-1       |                          ^
+postgres-1       | CREATE FUNCTION
+tenancy-1        |   const result = binding.mkdir(
+tenancy-1        |                          ^
+tenancy-1        | 
+tenancy-1        | Error: EACCES: permission denied, mkdir '/nonexistent/.cache/node/corepack/v1'
+tenancy-1        |     at mkdirSync (node:fs:1350:26)
+tenancy-1        |     at getTemporaryFolder (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:12815:27)
+tenancy-1        |     at download (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13131:21)
+tenancy-1        |     at installVersion (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13229:61)
+tenancy-1        |     at async Engine.ensurePackageManager (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13744:32)
+postgres-1       | DO
+postgres-1       | 
+postgres-1       | 
+postgres-1       | waiting for server to shut down....2026-05-24 17:10:41.899 UTC [42] LOG:  received fast shutdown request
+tenancy-1        |     at async Engine.executePackageManagerRequest (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13855:25)
+tenancy-1        |     at async Object.runMain (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:14566:7) {
+tenancy-1        |   errno: -13,
+tenancy-1        |   code: 'EACCES',
+tenancy-1        |   syscall: 'mkdir',
+tenancy-1        |   path: '/nonexistent/.cache/node/corepack/v1'
+tenancy-1        | }
+tenancy-1        | 
+tenancy-1        | Node.js v24.16.0
+audit-1          | 
+audit-1          | Error: EACCES: permission denied, mkdir '/nonexistent/.cache/node/corepack/v1'
+audit-1          |     at mkdirSync (node:fs:1350:26)
+audit-1          |     at getTemporaryFolder (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:12815:27)
+postgres-1       | 2026-05-24 17:10:41.902 UTC [42] LOG:  aborting any active transactions
+postgres-1       | 2026-05-24 17:10:41.905 UTC [42] LOG:  background worker "logical replication launcher" (PID 48) exited with exit code 1
+postgres-1       | 2026-05-24 17:10:41.905 UTC [43] LOG:  shutting down
+postgres-1       | 2026-05-24 17:10:41.907 UTC [43] LOG:  checkpoint starting: shutdown immediate
+postgres-1       | 2026-05-24 17:10:41.965 UTC [43] LOG:  checkpoint complete: wrote 926 buffers (5.7%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.025 s, sync=0.006 s, total=0.060 s; sync files=301, longest=0.003 s, average=0.001 s; distance=4279 kB, estimate=4279 kB; lsn=0/1920540, redo lsn=0/1920540
+postgres-1       | 2026-05-24 17:10:41.975 UTC [42] LOG:  database system is shut down
+postgres-1       |  done
+postgres-1       | server stopped
+postgres-1       | 
+documents-1      |     at async Engine.executePackageManagerRequest (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13855:25)
+documents-1      |     at async Object.runMain (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:14566:7) {
+documents-1      |   errno: -13,
+documents-1      |   code: 'EACCES',
+documents-1      |   syscall: 'mkdir',
+documents-1      |   path: '/nonexistent/.cache/node/corepack/v1'
+documents-1      | }
+documents-1      | 
+documents-1      | Node.js v24.16.0
+rooming-1        | 
+assistant-1      | 
+assistant-1      | Node.js v24.16.0
+rooming-1        | Node.js v24.16.0
+payments-1       | 
+payments-1       | Error: EACCES: permission denied, mkdir '/nonexistent/.cache/node/corepack/v1'
+payments-1       |     at mkdirSync (node:fs:1350:26)
+payments-1       |     at getTemporaryFolder (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:12815:27)
+payments-1       |     at download (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13131:21)
+payments-1       |     at installVersion (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13229:61)
+payments-1       |     at async Engine.ensurePackageManager (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13744:32)
+payments-1       |     at async Engine.executePackageManagerRequest (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13855:25)
+payments-1       |     at async Object.runMain (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:14566:7) {
+payments-1       |   errno: -13,
+payments-1       |   code: 'EACCES',
+postgres-1       | PostgreSQL init process complete; ready for start up.
+audit-1          |     at download (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13131:21)
+audit-1          |     at installVersion (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13229:61)
+audit-1          |     at async Engine.ensurePackageManager (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13744:32)
+platform-1       |   path: '/nonexistent/.cache/node/corepack/v1'
+platform-1       | }
+platform-1       | 
+platform-1       | Node.js v24.16.0
+itineraries-1    |     at async Object.runMain (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:14566:7) {
+itineraries-1    |   errno: -13,
+itineraries-1    |   code: 'EACCES',
+itineraries-1    |   syscall: 'mkdir',
+itineraries-1    |   path: '/nonexistent/.cache/node/corepack/v1'
+itineraries-1    | }
+itineraries-1    | 
+itineraries-1    | Node.js v24.16.0
+trips-1          |                          ^
+trips-1          | 
+trips-1          | Error: EACCES: permission denied, mkdir '/nonexistent/.cache/node/corepack/v1'
+trips-1          |     at mkdirSync (node:fs:1350:26)
+trips-1          |     at getTemporaryFolder (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:12815:27)
+trips-1          |     at download (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13131:21)
+trips-1          |     at installVersion (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13229:61)
+trips-1          |     at async Engine.ensurePackageManager (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13744:32)
+trips-1          |     at async Engine.executePackageManagerRequest (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13855:25)
+trips-1          |     at async Object.runMain (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:14566:7) {
+trips-1          |   errno: -13,
+trips-1          |   code: 'EACCES',
+trips-1          |   syscall: 'mkdir',
+postgres-1       | 
+postgres-1       | 2026-05-24 17:10:42.030 UTC [1] LOG:  starting PostgreSQL 16.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+postgres-1       | 2026-05-24 17:10:42.030 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+postgres-1       | 2026-05-24 17:10:42.030 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+payments-1       |   syscall: 'mkdir',
+payments-1       |   path: '/nonexistent/.cache/node/corepack/v1'
+payments-1       | }
+payments-1       | 
+payments-1       | Node.js v24.16.0
+web-1            | Preparing pnpm@11.3.0 for immediate activation...
+web-1            | Scope: all 20 workspace projects
+web-1            | [ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY] Aborted removal of modules directory due to no TTY
+web-1            | 
+web-1            | If you are running pnpm in CI, set the CI environment variable to "true", or set "confirmModulesPurge" to "false".
+trips-1          |   path: '/nonexistent/.cache/node/corepack/v1'
+audit-1          |     at async Engine.executePackageManagerRequest (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13855:25)
+trips-1          | }
+audit-1          |     at async Object.runMain (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:14566:7) {
+audit-1          |   errno: -13,
+audit-1          |   code: 'EACCES',
+audit-1          |   syscall: 'mkdir',
+audit-1          |   path: '/nonexistent/.cache/node/corepack/v1'
+audit-1          | }
+audit-1          | 
+audit-1          | Node.js v24.16.0
+postgres-1       | 2026-05-24 17:10:42.035 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+postgres-1       | 2026-05-24 17:10:42.041 UTC [62] LOG:  database system was shut down at 2026-05-24 17:10:41 UTC
+postgres-1       | 2026-05-24 17:10:42.048 UTC [1] LOG:  database system is ready to accept connections
+trips-1          | 
+trips-1          | Node.js v24.16.0
+notifications-1  |     at async Engine.ensurePackageManager (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13744:32)
+notifications-1  |     at async Engine.executePackageManagerRequest (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:13855:25)
+notifications-1  |     at async Object.runMain (/usr/local/lib/node_modules/corepack/dist/lib/corepack.cjs:14566:7) {
+notifications-1  |   errno: -13,
+notifications-1  |   code: 'EACCES',
+notifications-1  |   syscall: 'mkdir',
+notifications-1  |   path: '/nonexistent/.cache/node/corepack/v1'
+notifications-1  | }
+notifications-1  | 
+notifications-1  | Node.js v24.16.0

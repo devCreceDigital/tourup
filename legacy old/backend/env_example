@@ -1,0 +1,9 @@
+# Variables de entorno para OpenRouter
+OPENROUTER_API_KEY=sk-or-v1-tu-api-key-aqui
+OPENROUTER_APP_URL=https://totemhub.com
+OPENROUTER_APP_TITLE=ToTem HUB Asistente IA
+
+# Variables de Redis (si no están configuradas)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_DB=0

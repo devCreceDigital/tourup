@@ -1,0 +1,107 @@
+﻿@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* ============================================
+     COLORES PRIMARIOS — BACKOFFICE
+     ============================================ */
+  --color-primary: #5B4FE8;
+  --color-primary-hover: #4A3FD4;
+  --color-primary-light: #ECE6FB;
+
+  --color-accent: #00C9B1;
+  --color-accent-hover: #00A899;
+  --color-accentbg: #E0FAF6;
+
+  /* === COLORES OSCUROS === */
+  --color-darknavy: #1E1B4B;
+  --color-banner: #2D2D6E;
+
+  /* === FONDOS === */
+  --color-bg: #EEF0F8;
+  --color-bgcard: #FFFFFF;
+  --color-bgcardalt: #F5F6FB;
+  --color-bgtableheader: #F5F6FB;
+  --color-bgtablehover: #FAFBFF;
+
+  /* === BORDES === */
+  --color-border: #E0E4EF;
+  --color-borderinput: #D0D4E4;
+  --color-borderlight: #F0F2F5;
+
+  /* === TEXTO === */
+  --color-text: #222222;
+  --color-textsecondary: #666666;
+  --color-textmuted: #888888;
+  --color-textlabel: #666666;
+
+  /* === ESTADOS === */
+  --color-success: #1A8A4A;
+  --color-successbg: #E3F9EC;
+  --color-warning: #F59E0B;
+  --color-warningbg: #FFF3E0;
+  --color-danger: #E05252;
+  --color-dangerbg: #FDEAEA;
+  --color-info: #5B5BDB;
+  --color-infobg: #ECE6FB;
+
+  /* === RADIOS === */
+  --radius-card: 8px;
+  --radius-cardlg: 12px;
+  --radius-btn: 6px;
+  --radius-badge: 10px;
+
+  /* === SOMBRAS === */
+  --shadow-card: 0 2px 16px rgba(0, 0, 0, 0.10);
+  --shadow-lg: 0 4px 28px rgba(0, 0, 0, 0.14);
+
+  /* ============================================
+     COLORES — LANDING PUBLICA
+     ============================================ */
+  --color-landing: #00B4FC;
+  --color-landing-hover: #0098D6;
+  --color-landing-soft: #E6F7FF;
+  --color-ink: #0F1E2D;
+  --color-ink-soft: #6F6F6F;
+
+  /* ============================================
+     TIPOGRAFIAS
+     ============================================ */
+  --font-sans: var(--font-inter), 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-serif-google), 'Times New Roman', Georgia, serif;
+}
+
+/* ============================================
+   ESTILOS GLOBALES
+   ============================================ */
+html {
+  color-scheme: light;
+  background: #D8DCE8;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar mas sobrio */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d0d4e4;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a0a4b4;
+}

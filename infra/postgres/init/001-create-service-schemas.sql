@@ -1,0 +1,15 @@
+create schema if not exists identity;
+create schema if not exists tenancy;
+create schema if not exists catalog;
+create schema if not exists itineraries;
+create schema if not exists trips;
+create schema if not exists enrollments;
+create schema if not exists payments;
+create schema if not exists subscriptions;
+create schema if not exists documents;
+create schema if not exists rooming;
+create schema if not exists notifications;
+create schema if not exists assistant;
+create schema if not exists support;
+create schema if not exists platform;
+create schema if not exists audit;

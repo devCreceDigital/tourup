@@ -1,0 +1,186 @@
+import base64
+import json
+import os
+import urllib.request
+
+import jwt
+from django.conf import settings
+from rest_framework import authentication
+from rest_framework import exceptions
+
+from apps.tenancy.db_context import apply_db_context
+from apps.usuarios.tokens import decode_app_token
+
+
+class SupabaseUser:
+    def __init__(self, user_id, email, rol="usuario", tenant_id=None):
+        self.id = user_id
+        self.email = email
+        self.rol = rol
+        self.tenant_id = tenant_id
+        self.is_authenticated = True
+
+    def __str__(self):
+        return self.email
+
+
+def _get_bearer_token(request):
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None
+    return auth_header.split(" ", 1)[1].strip() or None
+
+
+def _decode_unverified_payload(token):
+    try:
+        return jwt.decode(
+            token,
+            options={"verify_signature": False, "verify_exp": False, "verify_aud": False},
+            algorithms=["HS256", "ES256"],
+        )
+    except jwt.InvalidTokenError:
+        return None
+
+
+def _tenant_mismatch(request, tenant_id) -> bool:
+    request_tenant_id = getattr(request, "tenant_id", None)
+    return bool(request_tenant_id and tenant_id and str(request_tenant_id) != str(tenant_id))
+
+
+def _normalize_token_role(role):
+    raw = (role or "").strip().lower()
+    if raw == "superadmin":
+        return "superadmin"
+    if raw == "admin":
+        return "admin"
+    if raw == "profesor":
+        return "profesor"
+    return "viajero"
+
+
+def _decode_supabase_es256(token):
+    """Verifica un JWT ES256 de Supabase usando JWKS público."""
+    supabase_url = os.getenv("SUPABASE_URL", "").rstrip("/")
+    if not supabase_url:
+        raise jwt.InvalidTokenError("SUPABASE_URL no configurado")
+
+    jwks_url = f"{supabase_url}/auth/v1/.well-known/jwks.json"
+    try:
+        with urllib.request.urlopen(jwks_url, timeout=5) as r:
+            jwks = json.loads(r.read())
+    except Exception as e:
+        raise jwt.InvalidTokenError(f"No se pudo obtener JWKS: {e}")
+
+    kid = jwt.get_unverified_header(token).get("kid")
+    from jwt.algorithms import ECAlgorithm
+    key = None
+    for k in jwks.get("keys", []):
+        if k.get("kid") == kid:
+            key = ECAlgorithm.from_jwk(json.dumps(k))
+            break
+
+    if not key:
+        raise jwt.InvalidTokenError(f"No se encontró la clave kid={kid} en JWKS")
+
+    return jwt.decode(
+        token,
+        key,
+        algorithms=["ES256"],
+        options={"verify_aud": False},
+    )
+
+
+def _get_tenant_from_db(user_id: str) -> str | None:
+    """Busca el tenant_id del usuario en la tabla perfiles."""
+    try:
+        from django.db import connection
+        with connection.cursor() as c:
+            c.execute(
+                "SELECT tenant_id FROM perfiles WHERE id = %s LIMIT 1",
+                [str(user_id)]
+            )
+            row = c.fetchone()
+            return str(row[0]) if row and row[0] else None
+    except Exception as e:
+        print(f">>> [Auth] Error buscando tenant en DB: {e}")
+        return None
+
+
+class SupabaseAuthentication(authentication.BaseAuthentication):
+    def authenticate(self, request):
+        token = _get_bearer_token(request)
+        if not token:
+            return None
+
+        unverified_payload = _decode_unverified_payload(token) or {}
+        issuer = unverified_payload.get("iss")
+
+        # Token propio de la app (no de Supabase)
+        if issuer == getattr(settings, "APP_JWT_ISSUER", None):
+            payload = decode_app_token(token, expected_token_type="access")
+            tenant_id = payload.get("tenant_id")
+            if _tenant_mismatch(request, tenant_id):
+                raise exceptions.AuthenticationFailed("Conflicto de tenant.")
+            role = _normalize_token_role(payload.get("role"))
+            user = SupabaseUser(
+                user_id=payload.get("user_id") or payload.get("sub"),
+                email=payload.get("email"),
+                rol=role,
+                tenant_id=tenant_id,
+            )
+            apply_db_context(tenant_id=tenant_id, user_id=user.id, role=role)
+            return (user, token)
+
+        # Token de Supabase
+        try:
+            header = jwt.get_unverified_header(token)
+            alg = header.get("alg", "HS256")
+        except Exception:
+            alg = "HS256"
+
+        print(f">>> [Auth] alg={alg} token={token[:30]}...")
+
+        try:
+            if alg == "ES256":
+                payload = _decode_supabase_es256(token)
+            else:
+                jwt_secret_raw = os.getenv("SUPABASE_JWT_SECRET", "")
+                try:
+                    jwt_secret = base64.b64decode(jwt_secret_raw + "==")
+                except Exception:
+                    jwt_secret = jwt_secret_raw
+                payload = jwt.decode(
+                    token,
+                    jwt_secret,
+                    algorithms=["HS256"],
+                    options={"verify_aud": False},
+                )
+
+            user_id = payload.get("sub")
+            email = payload.get("email")
+            app_metadata = payload.get("app_metadata", {}) or {}
+            user_metadata = payload.get("user_metadata", {}) or {}
+            tenant_id = (
+                payload.get("tenant_id")
+                or app_metadata.get("tenant_id")
+                or user_metadata.get("tenant_id")
+            )
+            if _tenant_mismatch(request, tenant_id):
+                raise exceptions.AuthenticationFailed("Conflicto de tenant.")
+
+            rol = _normalize_token_role(
+                app_metadata.get("rol") or user_metadata.get("rol") or payload.get("role")
+            )
+            # Si el JWT no trae tenant_id, buscarlo en la DB
+            if not tenant_id and user_id:
+                tenant_id = _get_tenant_from_db(user_id)
+            print(f">>> [Auth] OK user={email} rol={rol} tenant={tenant_id}")
+            user = SupabaseUser(user_id=user_id, email=email, rol=rol, tenant_id=tenant_id)
+            apply_db_context(tenant_id=tenant_id, user_id=user_id, role=rol)
+            return (user, token)
+
+        except jwt.ExpiredSignatureError:
+            raise exceptions.AuthenticationFailed("El token ha expirado.")
+        except jwt.InvalidTokenError as e:
+            print(f">>> [Auth] Token inválido: {e}")
+            raise exceptions.AuthenticationFailed("Token inválido.")

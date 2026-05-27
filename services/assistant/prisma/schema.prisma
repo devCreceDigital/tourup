@@ -1,0 +1,136 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  runtime             = "nodejs"
+  moduleFormat        = "esm"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["assistant"]
+}
+
+model AssistantSessionRecord {
+  id             String   @id @db.Uuid
+  tenantId       String?  @map("tenant_id") @db.Uuid
+  businessId     String?  @map("business_id") @db.Uuid
+  userId         String?  @map("user_id") @db.Uuid
+  userEmail      String?  @map("user_email")
+  status         String
+  version        Int      @default(1)
+  idempotencyKey String?  @unique @map("idempotency_key")
+  payload        Json
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([tenantId, userId])
+  @@index([status])
+  @@schema("assistant")
+  @@map("assistant_sessions")
+}
+
+model AssistantLeadRecord {
+  id             String   @id @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  sessionId      String?  @map("session_id") @db.Uuid
+  travelerEmail  String   @map("traveler_email")
+  status         String
+  idempotencyKey String?  @unique @map("idempotency_key")
+  payload        Json
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, travelerEmail])
+  @@index([sessionId])
+  @@schema("assistant")
+  @@map("assistant_leads")
+}
+
+model AssistantTripPlanRecord {
+  id          String   @id @db.Uuid
+  tenantId    String?  @map("tenant_id") @db.Uuid
+  userId      String?  @map("user_id") @db.Uuid
+  sessionId   String?  @map("session_id") @db.Uuid
+  shareToken  String   @unique @map("share_token")
+  isPublic    Boolean  @default(true) @map("is_public")
+  payload     Json
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([tenantId, userId])
+  @@index([sessionId])
+  @@index([isPublic, createdAt])
+  @@schema("assistant")
+  @@map("assistant_trip_plans")
+}
+
+model AssistantMemoryRecord {
+  id          String   @id @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  businessId  String?  @map("business_id") @db.Uuid
+  userId      String?  @map("user_id") @db.Uuid
+  userEmail   String?  @map("user_email")
+  ownerKey    String   @map("owner_key")
+  scope       String
+  kind        String
+  key         String
+  content     String
+  tags        Json     @default("{}")
+  embedding   Json?
+  importance  Float    @default(0.5)
+  sourceType  String   @map("source_type")
+  sourceId    String?  @map("source_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, ownerKey, scope, kind, key])
+  @@index([tenantId])
+  @@index([tenantId, userId])
+  @@index([tenantId, kind])
+  @@index([tenantId, updatedAt])
+  @@schema("assistant")
+  @@map("assistant_memories")
+}
+
+model AssistantSearchHistoryRecord {
+  id          String   @id @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  businessId  String?  @map("business_id") @db.Uuid
+  userId      String?  @map("user_id") @db.Uuid
+  userEmail   String?  @map("user_email")
+  sessionId   String?  @map("session_id") @db.Uuid
+  query       String
+  destination String?
+  intent      String
+  entities    Json     @default("{}")
+  toolResults Json     @default("[]") @map("tool_results")
+  embedding   Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([tenantId, userId])
+  @@index([tenantId, sessionId])
+  @@index([tenantId, createdAt])
+  @@schema("assistant")
+  @@map("assistant_search_history")
+}
+
+model OutboxEvent {
+  id          String    @id @db.Uuid
+  aggregateId String    @map("aggregate_id") @db.Uuid
+  tenantId    String?   @map("tenant_id") @db.Uuid
+  eventType   String    @map("event_type")
+  payload     Json
+  occurredAt  DateTime  @default(now()) @map("occurred_at")
+  processedAt DateTime? @map("processed_at")
+
+  @@index([tenantId])
+  @@index([processedAt])
+  @@schema("assistant")
+  @@map("assistant_sessions_outbox")
+}

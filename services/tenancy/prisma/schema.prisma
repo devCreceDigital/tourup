@@ -1,0 +1,65 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  runtime             = "nodejs"
+  moduleFormat       = "esm"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["tenancy"]
+}
+
+model TenantRecord {
+  id             String   @id @db.Uuid
+  tenantId       String?  @map("tenant_id") @db.Uuid
+  status         String
+  version        Int      @default(1)
+  idempotencyKey String?  @unique @map("idempotency_key")
+  payload        Json
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@schema("tenancy")
+  @@map("tenants")
+}
+
+model OutboxEvent {
+  id            String   @id @db.Uuid
+  aggregateId   String   @map("aggregate_id") @db.Uuid
+  tenantId      String?  @map("tenant_id") @db.Uuid
+  eventType     String   @map("event_type")
+  payload       Json
+  occurredAt    DateTime @default(now()) @map("occurred_at")
+  processedAt   DateTime? @map("processed_at")
+
+  @@index([tenantId])
+  @@index([processedAt])
+  @@schema("tenancy")
+  @@map("tenants_outbox")
+}
+
+model TenantPreferenceRecord {
+  tenantId             String   @id @map("tenant_id") @db.Uuid
+  logoUrl              String?  @map("logo_url")
+  primaryColor         String   @map("primary_color")
+  secondaryColor       String   @map("secondary_color")
+  description          String
+  website              String
+  phone                String
+  ruc                  String
+  bannerUrl            String?  @map("banner_url")
+  slogan               String
+  customDomain         String?  @map("custom_domain")
+  socialLinks          Json     @map("social_links")
+  preferences          Json
+  onboardingStep       Int      @map("onboarding_step")
+  onboardingCompleted  Boolean  @default(false) @map("onboarding_completed")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@schema("tenancy")
+  @@map("tenant_preferences")
+}
