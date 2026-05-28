@@ -27,5 +27,8 @@
   "engines": {
     "node": ">=24.0.0",
     "pnpm": ">=11.3.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.99.0"
   }
 }
