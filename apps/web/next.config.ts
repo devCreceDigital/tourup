@@ -9,7 +9,6 @@ loadEnvConfig(repoRoot);
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  typedRoutes: true,
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },

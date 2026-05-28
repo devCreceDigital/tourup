@@ -1,0 +1,14 @@
+"use client";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { requestTotemApi } from "@/shared/api/totem-api-client";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type MessageRole = "ai" | "user" | "system";
+
+type Message = {
+  id: string;
+  role: MessageRole;
+  content: string;
+  chips?

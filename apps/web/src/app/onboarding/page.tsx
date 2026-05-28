@@ -229,6 +229,10 @@ export default function OnboardingPage() {
 
   const progreso = ((paso - 1) / (PASOS.length - 1)) * 100;
 
+  const lastAIMsg=[...messages].reverse().find(m=>m.role==="ai"&&m.chips&&m.chips.length>0);
+  const activeChips=lastAIMsg?{chips:lastAIMsg.chips,msgId:lastAIMsg.id}:null;
+  const lastAIMsg=[...messages].reverse().find(m=>m.role==="ai"&&m.chips&&m.chips.length>0);
+  const activeChips=lastAIMsg?{chips:lastAIMsg.chips,msgId:lastAIMsg.id}:null;
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a1a] via-[#1a1040] to-[#0a0a1a] flex flex-col items-center justify-center p-4">
 
