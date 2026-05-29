@@ -7,6 +7,9 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 loadEnvConfig(repoRoot);
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: repoRoot,
+  },
   reactStrictMode: true,
   poweredByHeader: false,
   images: {
