@@ -100,6 +100,7 @@ LO QUE SE HIZO HOY
    e) Score gauge centrado: corregido con position:absolute en SVG + flex en overlay
 
    f) Barra de engagement duplicada → removida de SocialSection
+   g) Botón "Recalcular" → eliminado de la ficha de operador
 
 7. IDEMPOTENCIA EN DIRECTORIO-API
    ────────────────────────────────

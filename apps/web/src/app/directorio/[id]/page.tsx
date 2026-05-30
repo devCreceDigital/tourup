@@ -4,22 +4,10 @@ import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/shared/ui/navigation/Navbar";
 import LevelBadge from "../_components/LevelBadge";
 import { useGetOperator } from "../_hooks/useOperators";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_DIRECTORIO_API_URL ?? "http://localhost:8080";
 
-function useRecalculate(id: number, onSuccess: () => void) {
-  const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
-  const run = useCallback(async () => {
-    setLoading(true); setDone(false);
-    await fetch(`${API}/api/operators/${id}/score`, { method: "POST" }).catch(() => {});
-    setLoading(false); setDone(true);
-    setTimeout(() => setDone(false), 2500);
-    onSuccess();
-  }, [id, onSuccess]);
-  return { run, loading, done };
-}
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis,
   ResponsiveContainer, Tooltip,
@@ -27,7 +15,7 @@ import {
 import {
   ArrowLeft, Globe, Mail, MapPin, CheckCircle,
   Users, Star, Wifi, Hash,
-  TrendingUp, Award, MessageCircle, RefreshCw,
+  TrendingUp, Award, MessageCircle,
 } from "lucide-react";
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok } from "react-icons/si";
 
@@ -334,7 +322,6 @@ export default function OperatorDetailPage() {
   const router = useRouter();
   const id = parseInt(params.id ?? "0");
   const { data: op, isLoading, refetch } = useGetOperator(id);
-  const recalc = useRecalculate(id, () => refetch?.());
   const [showContact, setShowContact] = useState(false);
 
   if (isLoading) {
@@ -538,16 +525,6 @@ export default function OperatorDetailPage() {
                   style={{ background: "linear-gradient(135deg,#00B4FC,#5B4FE8)", color: "white" }}>
                   <Mail className="w-3 h-3" />
                   Contactar
-                </button>
-                <button
-                  onClick={recalc.run}
-                  disabled={recalc.loading}
-                  className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
-                  style={recalc.done
-                    ? { background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.3)", color: "#34D399" }
-                    : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.5)" }}>
-                  <RefreshCw className={`w-3 h-3 ${recalc.loading ? "animate-spin" : ""}`} />
-                  {recalc.loading ? "Calculando..." : recalc.done ? "¡Actualizado!" : "Recalcular"}
                 </button>
               </div>
             </div>
