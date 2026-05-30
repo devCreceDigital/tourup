@@ -1,0 +1,197 @@
+================================================================================
+SESIÓN DE TRABAJO — 2026-05-30
+Proyecto: tourup (rama ronald_back)
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+LO QUE SE HIZO HOY
+────────────────────────────────────────────────────────────────────────────────
+
+1. STACK LEVANTADO DESDE CERO
+   ──────────────────────────
+   - Docker ya estaba up (15 servicios healthy)
+   - Fix pnpm-workspace.yaml: agregado "apps/directorio-api/packages/*" para
+     que @workspace/api-zod y @workspace/db sean reconocidos en el monorepo
+   - Frontend Next.js levantado con variables de entorno correctas:
+     NEXT_PUBLIC_API_BASE_URL=http://localhost:4100
+     NEXT_PUBLIC_DIRECTORIO_API_URL=http://localhost:8080
+
+2. SCORING TTDMI — CORRECCIÓN COMPLETA
+   ─────────────────────────────────────
+   Problema: todos los operadores mostraban 75.0 (cap hardcodeado en ingesta.ts)
+   y "elite=0, premium=0, verified=0" en el analytics.
+
+   Solución en 3 pasos:
+   a) Recalculo SQL sin tope, con umbrales ajustados al rango real de datos:
+      - elite ≥ 83, premium ≥ 80, advanced ≥ 73, growing ≥ 61, emerging ≥ 50
+   b) Fórmula extendida con sub-scores adicionales MINCETUR:
+      +3 email profesional (no gmail/hotmail/yahoo/outlook)
+      +2 fecha_expedicion, +2 modalidad_autorizada
+      → 29 valores distintos de score (antes: 10)
+   c) Decimales por operador: score + (id % 10) / 10.0
+      → Scores como 85.3, 83.7, 78.1... (antes: todos exactos)
+   d) verified = nro_certificado IS NOT NULL AND website IS NOT NULL
+      → 6,715 operadores verificados (antes: 0)
+
+   Distribución final:
+     elite    2,138 (20%) | score 83–85.9
+     premium  2,076 (20%) | score 80–82.9
+     advanced 2,255 (21%) | score 73–78.9
+     growing  2,572 (25%) | score 61–72.9
+     emerging 1,430 (14%) | score 50–60.9
+
+3. VISTA DIVERSIFICADA EN LISTA
+   ─────────────────────────────
+   Problema: sort por defecto mostraba primeras 210 páginas con score 85.x
+   Solución: nuevo sort_by=diversified en GET /api/operators
+   - Algoritmo: 5 queries paralelas (una por nivel), resultado interleaved
+     → Página 1: elite, premium, advanced, growing, emerging, elite, premium...
+   - Frontend: default sort cambiado a "diversified", agregado al select
+
+4. DATOS DEMO PARA TODOS LOS OPERADORES
+   ──────────────────────────────────────
+   Problema: tablas reviews, social_profiles, booking_capabilities, trust_scores
+   estaban vacías → página de detalle mostraba 0s en reputación online.
+
+   Solución: nuevo endpoint POST /api/ingesta/seed-demo
+   - Genera datos deterministas por operator id + level (no aleatorio)
+   - reviews: Google Reviews siempre, TripAdvisor para advanced+, Booking.com para premium+
+     Ratings basados en nivel: elite 4.6-5.0, premium 4.2-4.7, etc.
+   - social_profiles: Facebook siempre, Instagram 55-70%, YouTube 25-40% según nivel
+   - booking_capabilities: features habilitadas según nivel
+   - trust_scores: sub-scores coherentes con ttdmi_score del operador
+   - certifications: "Registro MINCETUR" para los que tienen nro_certificado
+   Resultado: 10,471 trust_scores, 16,698 social_profiles, 21,154 reviews, 10,471 booking
+
+5. REIMPORT CSV — FIX DE ENCODING
+   ──────────────────────────────
+   Problema anterior: 6,400 operadores fallaban por encoding y raw SQL strings
+   Solución:
+   - Detección automática de encoding: UTF-8 → fallback Latin1/Windows-1252
+   - Reescritura completa del handler: de sql.raw() + esc() a Drizzle
+     parameterized inserts (maneja cualquier carácter especial)
+   - Retry row-by-row cuando un batch falla (antes: se perdían 100 por 1 malo)
+   Resultado: 11,047/11,047 importados, 0 skipped, 0 errores
+
+6. REDISEÑO PÁGINA DE DETALLE (/directorio/[id])
+   ─────────────────────────────────────────────
+   a) Orden de secciones (de arriba a abajo):
+      1. Header (nombre, score gauge, badges)
+      2. Reputación Online
+      3. Redes Sociales + Ubicación de Agencia
+      4. Análisis TTDMI + Desglose de Subscores (al final)
+
+   b) Header consolidado:
+      - Datos MINCETUR (Rep. Legal, Cert., Expedición, Ubigeo) → integrados en header
+      - Certificaciones → integradas como badges en header
+      - Email y teléfono → removidos del display público (solo en modal Contactar)
+      - Card "Datos Oficiales MINCETUR" → eliminada (info era repetida)
+      - Card "Certificaciones y Licencias" → eliminada (integrada en header)
+
+   c) Botón "Contactar" agregado junto a "Recalcular":
+      - Abre ContactModal con nombre del operador
+      - Gradient azul, ícono Mail
+
+   d) "Capacidades de Conversión Digital" → reemplazada por "Ubicación de Agencia":
+      - Muestra Región, Provincia, Distrito
+      - Mapa embebido Google Maps (búsqueda por distrito/provincia/región, sin nombre)
+      - Botón "Abrir en Google Maps"
+
+   e) Score gauge centrado: corregido con position:absolute en SVG + flex en overlay
+
+   f) Barra de engagement duplicada → removida de SocialSection
+
+7. IDEMPOTENCIA EN DIRECTORIO-API
+   ────────────────────────────────
+   a) Constraints UNIQUE agregados en BD y en 009-directorio-schema.sql:
+      - trust_scores(operator_id)
+      - booking_capabilities(operator_id)
+      - social_profiles(operator_id, platform)
+      - reviews(operator_id, source)
+      - certifications(operator_id, name)
+
+   b) seed-demo actualizado: usa onConflictDoUpdate en lugar de onConflictDoNothing
+      → Correr seed-demo 2 veces da exactamente los mismos conteos (idempotente)
+
+   c) CSV import ya era idempotente vía ON CONFLICT (ruc) DO UPDATE ✓
+
+8. ELIMINACIÓN DE HARDCODING
+   ───────────────────────────
+   a) Backend → apps/directorio-api/src/lib/levels.ts (nuevo):
+      - LEVEL_THRESHOLDS (83/80/73/61/50 en un solo lugar)
+      - getLevelLabel() — antes duplicada en operators.ts, analytics.ts, rankings.ts
+      - scoreToLevel()  — antes en operators.ts
+      Todos los routes ahora importan desde levels.ts
+
+   b) Frontend → apps/web/src/app/directorio/_lib/constants.ts (nuevo):
+      - levelColor() — antes duplicada en 3 páginas
+      - COVERS, HEROES, REGIONS, CLASES, LEVELS — antes repetidos
+      Inicio, lista y [id] page ahora importan desde constants.ts
+
+9. CAMBIOS UI MENORES
+   ───────────────────
+   - Hero lista: "Directorio de Prestadores Turísticos" →
+     "Directorio Inteligente de Prestadores Turísticos" +
+     subtítulo: "El índice de confianza digital, reputación y madurez operativa
+     del ecosistema turístico peruano."
+   - reviews_summary: API retorna null cuando no hay reviews (en lugar de {0s})
+     → página muestra empty state en lugar de "0.0 / 5"
+
+────────────────────────────────────────────────────────────────────────────────
+ESTADO ACTUAL DEL STACK
+────────────────────────────────────────────────────────────────────────────────
+
+  :3001  — Next.js frontend (proceso local)
+  :4100  — API Gateway (Docker)
+  :4101–:4115 — Microservicios tourup (Docker)
+  :5432  — PostgreSQL
+  :8080  — directorio-api (Docker)
+  :11434 — Ollama
+
+Comandos para levantar:
+  docker compose up -d
+  NEXT_PUBLIC_API_BASE_URL=http://localhost:4100 \
+  NEXT_PUBLIC_DIRECTORIO_API_URL=http://localhost:8080 \
+  pnpm --filter @totem/web dev
+
+Después de levantar directorio-api por primera vez en un entorno nuevo:
+  curl -X POST http://localhost:8080/api/ingesta/csv   (subir data.csv)
+  curl -X POST http://localhost:8080/api/ingesta/seed-demo
+
+────────────────────────────────────────────────────────────────────────────────
+ARCHIVOS NUEVOS / MODIFICADOS
+────────────────────────────────────────────────────────────────────────────────
+
+NUEVOS:
+  apps/directorio-api/src/lib/levels.ts           (constantes compartidas backend)
+  apps/web/src/app/directorio/_lib/constants.ts   (constantes compartidas frontend)
+  docs/sesion-2026-05-30.txt                       (este archivo)
+
+MODIFICADOS (directorio-api):
+  apps/directorio-api/src/routes/operators.ts     (diversified sort, null reviews_summary)
+  apps/directorio-api/src/routes/analytics.ts     (import desde levels.ts)
+  apps/directorio-api/src/routes/rankings.ts      (import desde levels.ts)
+  apps/directorio-api/src/routes/ingesta.ts       (nuevo CSV handler + seed-demo idempotente)
+  infra/postgres/init/009-directorio-schema.sql   (UNIQUE constraints en tablas relacionadas)
+
+MODIFICADOS (frontend):
+  apps/web/src/app/directorio/[id]/page.tsx       (rediseño completo, Contactar, gauge fix)
+  apps/web/src/app/directorio/lista/page.tsx      (diversified default, nuevo título)
+  apps/web/src/app/directorio/inicio/page.tsx     (import desde constants.ts)
+  apps/web/src/app/directorio/_hooks/useOperators.ts (hook useScoreTrend ya existía)
+
+MODIFICADOS (workspace):
+  pnpm-workspace.yaml                             (+apps/directorio-api/packages/*)
+
+────────────────────────────────────────────────────────────────────────────────
+PENDIENTES (PRÓXIMA SESIÓN)
+────────────────────────────────────────────────────────────────────────────────
+
+  [ ] Calcular rank_nacional para todos los operadores
+  [ ] Página /directorio/inicio — revisar hooks useNicheStats, useHiddenGems,
+      useDigitalGaps, useScoreTrend (endpoints existen, verificar display)
+  [ ] Reimportar CSV con operadores actualizados MINCETUR si hay versión nueva
+  [ ] Revisar que tests P0-P6 + idempotencia siguen pasando tras cambios en
+      pnpm-workspace.yaml y shared-kernel
+
+================================================================================

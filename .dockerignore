@@ -1,6 +1,7 @@
 .git
 ANtigua estructura completa
 node_modules
+**/node_modules
 dist
 .next
 coverage

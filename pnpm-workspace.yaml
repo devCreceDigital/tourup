@@ -1,5 +1,6 @@
 packages:
   - "apps/*"
+  - "apps/directorio-api/packages/*"
   - "services/*"
   - "packages/*"
 allowBuilds:

@@ -1,0 +1,188 @@
+================================================================================
+SESIÓN DE TRABAJO — 2026-05-29
+Proyecto: tourup (rama ronald_back)
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+LO QUE SE HIZO HOY
+────────────────────────────────────────────────────────────────────────────────
+
+1. ERRORES TYPESCRIPT CORREGIDOS (apps/web/src/app/directorio/)
+   ─────────────────────────────────────────────────────────────
+   Archivo: [id]/page.tsx
+   - useState importado como alias "useLocalState" pero usado como "useState"
+     → Cambiado import a { useCallback, useState } sin alias
+   - Prop "isEstimated" pasado a SocialSection sin estar en su firma
+     → Removido el prop extra de la llamada
+   - Tooltip formatter de recharts con tipo incompatible
+     → Cast a (v as number).toFixed(1)
+   - booking_capabilities cast directo a Record<string,boolean>
+     → Cast a través de unknown primero
+
+   Archivo: _components/LevelBadge.tsx
+   - cfg posiblemente undefined al acceder LEVELS[level]
+     → Fallback con objeto literal en lugar de LEVELS.risk
+
+   Archivo: inicio/page.tsx
+   - summary?.regions_covered no existe en AnalyticsSummary
+     → Cambiado a valor fijo "25" (Perú siempre tiene 25 regiones)
+   - heroImg tipado como string | undefined → Error en <Image>
+     → Resuelto con useState<string> + useEffect para SSR safety
+
+   Archivo: lista/page.tsx
+   - heroImg mismo problema de tipo
+     → Mismo fix
+
+   Archivo: layout.tsx
+   - React.ReactNode sin import de React
+     → Cambiado a import type { ReactNode } from "react"
+
+2. HYDRATION ERROR CORREGIDO (lista/page.tsx e inicio/page.tsx)
+   ─────────────────────────────────────────────────────────────
+   Problema: Math.random() en useState initializer generaba imagen diferente
+   en SSR vs cliente, causando mismatch de hydration en Next.js.
+   Solución: useState con HEROES[0] fijo (SSR-safe) + useEffect para
+   asignar imagen aleatoria solo después del mount en cliente.
+
+3. BACKEND DIRECTORIO-API INTEGRADO AL PROYECTO
+   ─────────────────────────────────────────────
+   Origen: ZIP "Peruvian-Tourism-Compass.zip" (proyecto Replit independiente)
+   Destino: apps/directorio-api/ dentro del monorepo tourup
+
+   Archivos creados:
+   - apps/directorio-api/Dockerfile          (build multi-stage, node:22-alpine)
+   - apps/directorio-api/package.json        (deps sin referencias a catalog:)
+   - apps/directorio-api/pnpm-workspace.yaml (incluye packages/*)
+   - apps/directorio-api/build.mjs           (esbuild bundler)
+   - apps/directorio-api/tsconfig.json
+   - apps/directorio-api/src/               (Express API: routes, app.ts, index.ts)
+   - apps/directorio-api/packages/db/       (@workspace/db — Drizzle + pg)
+   - apps/directorio-api/packages/api-zod/  (@workspace/api-zod — Zod schemas)
+   - apps/directorio-api/data.csv           (CSV MINCETUR 11,047 operadores)
+   - apps/directorio-api/.dockerignore
+
+   - infra/postgres/init/009-directorio-schema.sql  (7 tablas nuevas)
+
+   docker-compose.yml:
+   - Nuevo servicio "directorio-api" en puerto 8080
+   - DATABASE_URL apunta al postgres existente del stack
+   - depends_on postgres (condition: service_healthy)
+
+4. TABLAS CREADAS EN POSTGRES (aplicadas en caliente)
+   ─────────────────────────────────────────────────────
+   - operators          (datos MINCETUR + TTDMI score + nivel)
+   - trust_scores       (desglose de sub-scores TTDMI)
+   - social_profiles    (redes sociales por operador)
+   - reviews            (reseñas agregadas por fuente)
+   - booking_capabilities (capacidades de conversion digital)
+   - certifications     (certificaciones y licencias)
+   - seo_metrics        (métricas SEO)
+
+5. DATOS IMPORTADOS
+   ─────────────────
+   Total CSV MINCETUR: 11,047 líneas
+   Importados exitosamente: 4,647 operadores
+   Skipped (errores de encoding/caracteres especiales en lote): 6,400
+   Endpoint usado: POST /api/ingesta/csv
+
+6. NAVBAR ACTUALIZADO
+   ────────────────────
+   Agregado link "Directorio" (con BookOpen icon) en desktop y menú móvil
+   → Apunta a /directorio/lista
+
+────────────────────────────────────────────────────────────────────────────────
+ESTADO ACTUAL DEL STACK
+────────────────────────────────────────────────────────────────────────────────
+
+Puertos activos:
+  :3001  — Next.js frontend (proceso local, arrancar con:
+            NEXT_PUBLIC_API_BASE_URL=http://localhost:4100
+            NEXT_PUBLIC_DIRECTORIO_API_URL=http://localhost:8080
+            pnpm --filter @totem/web dev)
+  :4100  — API Gateway (Docker)
+  :4101  — identity
+  :4102  — tenancy
+  :4103  — catalog
+  :4104  — itineraries
+  :4105  — trips
+  :4106  — enrollments
+  :4107  — payments
+  :4108  — subscriptions
+  :4109  — documents
+  :4110  — rooming
+  :4111  — notifications
+  :4112  — assistant (requiere Ollama)
+  :4113  — support
+  :4114  — platform
+  :4115  — audit
+  :5432  — PostgreSQL
+  :8080  — directorio-api ← NUEVO
+  :11434 — Ollama
+
+Para iniciar todo el stack:
+  docker compose up -d
+  pnpm --filter @totem/web dev   (en terminal aparte)
+
+────────────────────────────────────────────────────────────────────────────────
+TAREAS PENDIENTES (PRÓXIMA SESIÓN)
+────────────────────────────────────────────────────────────────────────────────
+
+DIRECTORIO (PRIORIDAD ALTA)
+  [ ] Reimportar CSV con mejor manejo de encoding para recuperar los 6,400
+      operadores que fallaron (problema con caracteres especiales en SQL)
+      → Mejorar función esc() en ingesta.ts o usar prepared statements
+  [ ] Calcular rankings (rank_nacional) en tabla operators
+      → Endpoint POST /api/operators/bulk-rank o script de recalculo
+  [ ] Agregar endpoint GET /api/analytics/summary a la API (lo usa el frontend
+      en KPIs: total_operators, verified_operators, avg_ttdmi_score, elite_count,
+      hidden_gems_count, top_region)
+  [ ] Agregar endpoint GET /api/rankings con parámetro type=nacional
+      (actualmente existe pero verificar respuesta correcta)
+  [ ] Agregar endpoint GET /api/analytics/score-distribution
+      (devuelve array con {level, label, count, avg_score, color})
+  [ ] Revisar page /directorio/inicio — tiene sus propios hooks adicionales:
+      useRegionStats, useNicheStats, useHiddenGems, useDigitalGaps, useScoreTrend
+      que necesitan endpoints en el API
+
+DIRECTORIO (PRIORIDAD MEDIA)
+  [ ] Subir los 4,647 operadores a rank con base en ttdmi_score
+  [ ] Agregar lógica de "verified=true" para operadores con website + email + cert
+  [ ] Revisar cómo mejorar scores TTDMI base de los datos MINCETUR
+  [ ] Página /directorio/[id] — verificar que carga sin errores con datos reales
+
+PROYECTO TOURUP PRINCIPAL
+  [ ] Revisar rama ronald_back — hay 13 archivos modificados sin commitear
+  [ ] Los cambios del directorio deben estar en su propio commit limpio
+  [ ] Verificar que los tests del proyecto siguen pasando (P0-P6 + idempotencia)
+
+ISSUES CONOCIDOS
+  [ ] Directorio-api: 6,400 registros no se importaron por errores de encoding
+  [ ] La ruta /directorio/inicio usa hooks no implementados en la API
+      (useRegionStats, useNicheStats, useHiddenGems, useDigitalGaps, useScoreTrend)
+      → Esas páginas mostrarán secciones vacías hasta implementar los endpoints
+
+────────────────────────────────────────────────────────────────────────────────
+ARCHIVOS MODIFICADOS (git status al final de sesión)
+────────────────────────────────────────────────────────────────────────────────
+
+Modificados (M):
+  .dockerignore
+  .npmrc
+  apps/web/package.json
+  apps/web/src/shared/ui/navigation/Navbar.tsx
+  docker-compose.yml
+  infra/postgres/init/002-rls-foundation.sql
+  infra/postgres/init/005-identity-auth-runtime.sql
+  infra/postgres/init/006-platform-internal-providers.sql
+  infra/postgres/init/007-assistant-search-history.sql
+  packages/service-runtime/src/http.ts
+  packages/shared-kernel/src/validate.ts
+  pnpm-lock.yaml
+
+Nuevos (??):
+  apps/web/public/images/           (8 imágenes: machu-picchu, nazca, colca, etc.)
+  apps/web/src/app/directorio/      (layout, page, lista, inicio, [id], _components, _hooks)
+  apps/directorio-api/              (todo el servicio nuevo)
+  infra/postgres/init/009-directorio-schema.sql
+
+================================================================================

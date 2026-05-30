@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Plane, User, LogOut, LayoutDashboard, Menu, X } from "lucide-react";
+import { Plane, User, LogOut, LayoutDashboard, Menu, X, BookOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -108,6 +108,13 @@ export default function Navbar() {
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#00B4FC] transition-all group-hover:w-full"></span>
             </Link>
           </li>
+          <li>
+            <Link href="/directorio/lista" className="relative group flex items-center gap-1 transition-colors text-[#00B4FC] hover:text-white">
+              <BookOpen className="h-4 w-4" />
+              Directorio
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#00B4FC] transition-all group-hover:w-full"></span>
+            </Link>
+          </li>
         </ul>
 
         {/* CTA a la derecha */}
@@ -193,6 +200,9 @@ export default function Navbar() {
               <Link href="/reservar" className="text-white/90 text-lg font-medium" onClick={() => setMobileMenuOpen(false)}>Reserva</Link>
               <Link href="/asistente-ia" className="text-[#00B4FC] text-lg font-medium flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
                 <SparkleIcon /> Asistente IA
+              </Link>
+              <Link href="/directorio/lista" className="text-[#00B4FC] text-lg font-medium flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
+                <BookOpen size={20} /> Directorio
               </Link>
 
               <div className="h-px bg-white/10 my-2"></div>

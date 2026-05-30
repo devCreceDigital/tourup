@@ -1,0 +1,4 @@
+dist/
+data.csv
+node_modules
+packages/*/node_modules

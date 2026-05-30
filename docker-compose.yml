@@ -55,7 +55,7 @@ services:
       dockerfile: infra/docker/workspace-dev.Dockerfile
     user: "${HOST_UID:-1001}:${HOST_GID:-1001}"
     working_dir: /workspace
-    command: pnpm --filter @totem/api-gateway dev
+    command: sh -c "pnpm --filter @totem/shared-kernel run build && pnpm --filter @totem/service-runtime run build && pnpm --filter @totem/api-gateway dev"
     volumes:
       - .:/workspace
     environment:
@@ -86,13 +86,26 @@ services:
     ports:
       - "4100:4100"
 
+  directorio-api:
+    build:
+      context: ./apps/directorio-api
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   web:
     build:
       context: .
       dockerfile: infra/docker/workspace-dev.Dockerfile
     user: "${HOST_UID:-1001}:${HOST_GID:-1001}"
     working_dir: /workspace
-    command: pnpm --filter @totem/web dev
+    command: sh -c "pnpm --filter @totem/shared-kernel run build && pnpm --filter @totem/web dev"
     volumes:
       - .:/workspace
     environment:
@@ -166,6 +179,7 @@ services:
       PORT: 4103
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=catalog
       SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      APP_ENV: ${APP_ENV:-local}
       EVENT_BUS_URL: http://platform:4114/platform/events/ingest
     depends_on:
       postgres:
@@ -184,6 +198,7 @@ services:
       PORT: 4104
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=itineraries
       SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      APP_ENV: ${APP_ENV:-local}
       EVENT_BUS_URL: http://platform:4114/platform/events/ingest
     depends_on:
       postgres:
@@ -202,6 +217,7 @@ services:
       PORT: 4105
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=trips
       SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      APP_ENV: ${APP_ENV:-local}
       EVENT_BUS_URL: http://platform:4114/platform/events/ingest
       SUBSCRIPTIONS_SERVICE_URL: http://subscriptions:4108
     depends_on:
@@ -221,6 +237,7 @@ services:
       PORT: 4106
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=enrollments
       SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      APP_ENV: ${APP_ENV:-local}
       EVENT_BUS_URL: http://platform:4114/platform/events/ingest
       SUBSCRIPTIONS_SERVICE_URL: http://subscriptions:4108
     depends_on:
@@ -240,6 +257,7 @@ services:
       PORT: 4107
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=payments
       SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      APP_ENV: ${APP_ENV:-local}
       EVENT_BUS_URL: http://platform:4114/platform/events/ingest
     depends_on:
       postgres:
@@ -258,6 +276,7 @@ services:
       PORT: 4108
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=subscriptions
       SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      APP_ENV: ${APP_ENV:-local}
       EVENT_BUS_URL: http://platform:4114/platform/events/ingest
       BILLING_PROVIDER_URL: http://platform:4114/platform/billing-provider
     depends_on:
@@ -277,6 +296,7 @@ services:
       PORT: 4109
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=documents
       SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      APP_ENV: ${APP_ENV:-local}
       EVENT_BUS_URL: http://platform:4114/platform/events/ingest
     depends_on:
       postgres:
@@ -295,6 +315,7 @@ services:
       PORT: 4110
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=rooming
       SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      APP_ENV: ${APP_ENV:-local}
       EVENT_BUS_URL: http://platform:4114/platform/events/ingest
     depends_on:
       postgres:
@@ -313,6 +334,7 @@ services:
       PORT: 4111
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=notifications
       SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      APP_ENV: ${APP_ENV:-local}
       EVENT_BUS_URL: http://platform:4114/platform/events/ingest
       # Email delivery — sin RESEND_API_KEY usa ConsoleEmailPort (solo log)
       RESEND_API_KEY: ${RESEND_API_KEY:-}
@@ -363,6 +385,7 @@ services:
       PORT: 4113
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=support
       SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      APP_ENV: ${APP_ENV:-local}
       EVENT_BUS_URL: http://platform:4114/platform/events/ingest
     depends_on:
       postgres:
@@ -381,6 +404,7 @@ services:
       PORT: 4114
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=platform
       SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      APP_ENV: ${APP_ENV:-local}
       EVENT_BUS_URL: http://platform:4114/platform/events/ingest
     depends_on:
       postgres:
@@ -399,6 +423,7 @@ services:
       PORT: 4115
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=audit
       SERVICE_INTERNAL_SECRET: ${SERVICE_INTERNAL_SECRET:?SERVICE_INTERNAL_SECRET is required}
+      APP_ENV: ${APP_ENV:-local}
       EVENT_BUS_URL: http://platform:4114/platform/events/ingest
     depends_on:
       postgres:
