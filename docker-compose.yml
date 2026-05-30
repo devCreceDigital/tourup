@@ -95,6 +95,9 @@ services:
     environment:
       PORT: 8080
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      CONTACT_FROM_EMAIL: ${CONTACT_FROM_EMAIL:-Directorio Turístico <noreply@tourup.pe>}
+      PLATFORM_CONTACT_EMAIL: ${PLATFORM_CONTACT_EMAIL:-villanuevaronaldinho@gmail.com}
     depends_on:
       postgres:
         condition: service_healthy

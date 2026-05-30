@@ -66,6 +66,9 @@ importers:
       pino-http:
         specifier: ^10.5.0
         version: 10.5.0
+      resend:
+        specifier: ^6.12.3
+        version: 6.12.3
     devDependencies:
       '@types/cookie-parser':
         specifier: ^1.4.10

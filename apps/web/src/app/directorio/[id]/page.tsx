@@ -105,11 +105,13 @@ function ScoreGauge({ score, size = 110 }: { score: number; size?: number }) {
 
 /* ─── Modal de contacto ─── */
 function ContactModal({
-  platform, operatorName, onClose,
-}: { platform: string; operatorName: string; onClose: () => void }) {
+  operatorId, operatorName, onClose,
+}: { operatorId: number; operatorName: string; onClose: () => void }) {
   const [form, setForm] = useState({ nombre: "", email: "", asunto: "", mensaje: "" });
+  const [autorizo, setAutorizo] = useState(false);
   const [sent, setSent]   = useState(false);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const field = (id: keyof typeof form) => ({
     value: form[id],
@@ -120,10 +122,23 @@ function ContactModal({
   const inputCls = "w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-white/30 outline-none transition-colors";
   const inputSt: React.CSSProperties = { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSending(true);
-    setTimeout(() => { setSending(false); setSent(true); }, 1200);
+    if (!autorizo) return;
+    setSending(true); setError(null);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_DIRECTORIO_API_URL ?? "http://localhost:8080"}/api/operators/${operatorId}/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error();
+      setSent(true);
+    } catch {
+      setError("No se pudo enviar el mensaje. Intenta de nuevo.");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -137,7 +152,7 @@ function ContactModal({
         <div className="flex items-center justify-between px-5 py-4"
           style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
           <div>
-            <p className="font-semibold text-white text-sm">Contactar en {platform}</p>
+            <p className="font-semibold text-white text-sm">Contactar Agencia</p>
             <p className="text-xs text-white/40 mt-0.5">{operatorName}</p>
           </div>
           <button onClick={onClose}
@@ -178,7 +193,7 @@ function ContactModal({
               </div>
               <div>
                 <label className="text-[11px] text-white/40 mb-1 block">Asunto</label>
-                <input type="text" placeholder={`Consulta vía ${platform}`} {...field("asunto")}
+                <input type="text" placeholder="Ej: Consulta sobre paquetes turísticos" {...field("asunto")}
                   className={inputCls} style={inputSt} />
               </div>
               <div>
@@ -186,13 +201,36 @@ function ContactModal({
                 <textarea placeholder="Describe tu consulta o solicitud..." required rows={4}
                   {...field("mensaje")} className={`${inputCls} resize-none`} style={inputSt} />
               </div>
-              <button type="submit" disabled={sending}
-                className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60 mt-1"
+
+              {/* Checkbox autorización */}
+              <label className="flex items-start gap-2.5 cursor-pointer group">
+                <div className="relative mt-0.5 shrink-0">
+                  <input type="checkbox" checked={autorizo} onChange={(e) => setAutorizo(e.target.checked)}
+                    className="sr-only" />
+                  <div className="w-4 h-4 rounded flex items-center justify-center transition-all"
+                    style={autorizo
+                      ? { background: "rgba(0,180,252,0.8)", border: "1px solid #00B4FC" }
+                      : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.2)" }}>
+                    {autorizo && <span className="text-white text-[10px] font-bold">✓</span>}
+                  </div>
+                </div>
+                <span className="text-[11px] text-white/40 leading-relaxed group-hover:text-white/60 transition-colors">
+                  Autorizo el uso de mi información de contacto para que la agencia y el Directorio Turístico
+                  puedan responder a mi consulta y enviarme información relacionada.
+                </span>
+              </label>
+
+              {error && (
+                <p className="text-[11px] text-red-400 text-center">{error}</p>
+              )}
+
+              <button type="submit" disabled={sending || !autorizo}
+                className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed mt-1"
                 style={{ background: "linear-gradient(135deg,#00B4FC,#5B4FE8)" }}>
-                {sending ? "Enviando..." : `Enviar por ${platform}`}
+                {sending ? "Enviando..." : "Enviar consulta"}
               </button>
               <p className="text-[10px] text-white/25 text-center">
-                Al enviar, el operador podrá contactarte al email indicado.
+                Tu consulta llegará directamente a la agencia.
               </p>
             </form>
           )}
@@ -695,7 +733,7 @@ export default function OperatorDetailPage() {
 
       {showContact && (
         <ContactModal
-          platform="Email"
+          operatorId={op.id}
           operatorName={op.commercial_name}
           onClose={() => setShowContact(false)}
         />
