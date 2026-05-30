@@ -10,6 +10,7 @@ COPY tsconfig.base.json ./
 COPY packages ./packages
 COPY services ./services
 RUN pnpm install
+RUN pnpm --filter @totem/shared-kernel run build && pnpm --filter @totem/service-runtime run build
 
 FROM node:24-bookworm-slim AS runtime
 WORKDIR /workspace

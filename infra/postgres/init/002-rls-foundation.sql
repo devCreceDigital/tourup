@@ -76,7 +76,12 @@ returns event_trigger
 language plpgsql
 as $$
 begin
+  if current_setting('platform_security.applying_rls', true) = 'true' then
+    return;
+  end if;
+  perform set_config('platform_security.applying_rls', 'true', true);
   perform platform_security.apply_tenant_rls();
+  perform set_config('platform_security.applying_rls', 'false', true);
 end;
 $$;
 

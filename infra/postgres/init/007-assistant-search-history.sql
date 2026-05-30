@@ -19,4 +19,4 @@ create index if not exists assistant_search_history_tenant_user_idx on assistant
 create index if not exists assistant_search_history_tenant_session_idx on assistant.assistant_search_history(tenant_id, session_id);
 create index if not exists assistant_search_history_tenant_created_idx on assistant.assistant_search_history(tenant_id, created_at);
 
-select platform_security.apply_tenant_rls('assistant', 'assistant_search_history');
+select platform_security.apply_tenant_rls();

@@ -141,6 +141,7 @@ export function startHttpService(serviceName: string, routes: readonly Route[], 
   const limiter = defaultRateLimiter();
   const log = createLogger(serviceName);
   const server = createServer(async (request, response) => {
+    let context: TenantContext | undefined;
     try {
       applyCors(request, response);
       const method = request.method ?? "GET";
@@ -176,14 +177,14 @@ export function startHttpService(serviceName: string, routes: readonly Route[], 
       }
 
       const body = await readBody(request);
-      const context = createTenantContext(request);
+      context = createTenantContext(request);
       const payload = await runWithTenantContext(context, () => matchedRoute.route.handler({
         method,
         path,
         params: matchedRoute.params,
         query: url.searchParams,
         body,
-        context,
+        context: context!,
         headers: request.headers
       }));
       send(response, 200, payload);
