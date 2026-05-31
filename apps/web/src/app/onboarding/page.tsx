@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Step4ToolsSelector } from "@/components/onboarding/Step4ToolsSelector";
 import { Step4ConfigGrid } from "@/components/onboarding/Step4ConfigGrid";
 import { Step5PhotoUploader } from "@/components/onboarding/Step5PhotoUploader";
@@ -7,15 +8,25 @@ import { Step5LogoUploader } from "@/components/onboarding/Step5LogoUploader";
 import { Step5LandingPreview } from "@/components/onboarding/Step5LandingPreview";
 import { Step5WorkspaceConfig } from "@/components/onboarding/Step5WorkspaceConfig";
 import { Step6ConversationalInput } from "@/components/onboarding/Step6ConversationalInput";
-import { Step6DataDetected } from "@/components/onboarding/Step6DataDetected";
 import { Step6FormFields } from "@/components/onboarding/Step6FormFields";
 import { Step6TripPreview } from "@/components/onboarding/Step6TripPreview";
+import { Step7FileUpload } from "@/components/onboarding/Step7FileUpload";
+import { Step7Processing } from "@/components/onboarding/Step7Processing";
+import { Step7ProgramDetection } from "@/components/onboarding/Step7ProgramDetection";
+import { Step7Summary } from "@/components/onboarding/Step7Summary";
+import { Step7Creating } from "@/components/onboarding/Step7Creating";
+import { Step7Success } from "@/components/onboarding/Step7Success";
 import { createAgency } from "@/lib/api/onboarding";
 import { createTrip } from "@/lib/api/trips";
+import { saveAgency, addTrip as storeAddTrip, addWorker, uid as storeUid } from "@/lib/store/agencyStore";
+import type { AgencyData } from "@/lib/store/agencyStore";
 import { parseUserInput } from "@/lib/onboarding/parseUserInput";
+import { parseDocument } from "@/lib/documents/parseDocument";
+import { detectFileFormat } from "@/lib/documents/types";
 import type { ParsedTripData } from "@/lib/onboarding/parseUserInput";
 import type { TripData } from "@/lib/onboarding/validateTrip";
 import type { ConfigFields, LandingTexts, WorkspaceConfig } from "@/lib/api/onboarding";
+import type { ExtractedProgram } from "@/lib/documents/types";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -43,7 +54,12 @@ const TIPOS = ["Agencia Minorista", "Operador Mayorista", "DMC / Local", "Guia I
   11   → Paso 6  (datos detectados)
   12   → Paso 6  (formulario viaje)
   13   → Paso 6  (preview viaje)
-  14   → Paso 6  (éxito)
+  14   → Paso 7  (upload documentos)
+  15   → Paso 7  (procesando archivo)
+  16   → Paso 7  (detección programas)
+  17   → Paso 7  (resumen)
+  18   → Paso 7  (creando viajes)
+  19   → Paso 7  (éxito final)
 */
 
 function getDisplayStep(phase: number): number {
@@ -52,10 +68,11 @@ function getDisplayStep(phase: number): number {
   if (phase === 3) return 3;
   if (phase <= 5) return 4;
   if (phase <= 9) return 5;
-  return 6;
+  if (phase <= 13) return 6;
+  return 7;
 }
 
-const BAR_THRESHOLDS = [1, 2, 3, 4, 6, 10] as const;
+const BAR_THRESHOLDS = [1, 2, 3, 4, 6, 10, 14] as const;
 
 function uid() { return Math.random().toString(36).slice(2, 9); }
 
@@ -239,6 +256,7 @@ function SuccessScreen({ companyData, selectedTools, hasLanding, hasTripPublishe
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function OnboardingPage() {
+  const router = useRouter();
   const [messages, setMessages]   = useState<Message[]>([]);
   const [phase, setPhase]         = useState(0);
   const [input, setInput]         = useState("");
@@ -267,18 +285,24 @@ export default function OnboardingPage() {
 
   // Paso 6 — Viaje
   const [showTripChat, setShowTripChat]       = useState(false);
-  const [showTripDetect, setShowTripDetect]   = useState(false);
   const [showTripForm, setShowTripForm]       = useState(false);
+  const [tripUserInput, setTripUserInput]     = useState("");
   const [showTripView, setShowTripView]       = useState(false);
   const [parsedTrip, setParsedTrip]           = useState<ParsedTripData>({});
   const [tripData, setTripData]               = useState<TripData | null>(null);
   const [hasTripPublished, setHasTripPublished] = useState(false);
 
+  // Step 7
+  const [uploadedFile, setUploadedFile]               = useState<File | null>(null);
+  const [extractedPrograms, setExtractedPrograms]     = useState<ExtractedProgram[]>([]);
+  const [selectedPrograms, setSelectedPrograms]       = useState<ExtractedProgram[]>([]);
+  const [step7CreatedTrips, setStep7CreatedTrips]     = useState<Array<{ id: string; title: string; destination: string; status: "created" | "error" }>>([]);
+
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, showForm, showToolForm, showWorkspaceForm, showPhotoForm, showLogoForm, showLandingPreview, showWorkspaceConfig, showTripChat, showTripDetect, showTripForm, showTripView, phase]);
+  }, [messages, showForm, showToolForm, showWorkspaceForm, showPhotoForm, showLogoForm, showLandingPreview, showWorkspaceConfig, showTripChat, showTripForm, showTripView, phase, extractedPrograms, selectedPrograms]);
 
   useEffect(() => {
     const t = setTimeout(() => pushAI(
@@ -441,28 +465,17 @@ export default function OnboardingPage() {
     );
   }
 
-  // Paso 6.1 → 6.2
+  // Paso 6.1 → 6.2 (directo al formulario pre-llenado)
   function handleTripInputSubmit(userInput: string) {
     pushUser(userInput);
     const parsed = parseUserInput(userInput);
     setParsedTrip(parsed);
+    setTripUserInput(userInput);
     setShowTripChat(false);
-    setPhase(11);
-    setShowTripDetect(true);
-    pushAI(
-      "¡Excelente! Encontré casi toda la información para tu viaje. Déjame mostrarte qué capturé, y luego completamos los detalles que faltan.",
-      []
-    );
-  }
-
-  // Paso 6.2 → 6.3
-  function handleTripDataConfirm(data: ParsedTripData) {
-    setParsedTrip(data);
-    setShowTripDetect(false);
     setPhase(12);
     setShowTripForm(true);
     pushAI(
-      "¡Perfecto! Ahora completemos la información clave para tu viaje. Estos detalles ayudarán a tus viajeros a entender mejor la experiencia.",
+      "¡Perfecto! Aquí está lo que capturé de tu descripción. Completa los campos que falten para terminar los detalles de tu viaje.",
       []
     );
   }
@@ -479,7 +492,7 @@ export default function OnboardingPage() {
     );
   }
 
-  // Paso 6.4 → 7 (publicar)
+  // Paso 6.4 → 7.1 (publicar)
   async function handleTripPublish() {
     if (!tripData) return;
     setSubmitting(true);
@@ -492,14 +505,163 @@ export default function OnboardingPage() {
     setHasTripPublished(true);
     setShowTripView(false);
     setPhase(14);
-    pushAI("¡Tu primer viaje está publicado! Ya puedes compartirlo y empezar a recibir reservas.", []);
+    pushAI(
+      "¡Tu primer viaje está publicado!\n\nAhora vamos al último paso: puedo importar todos tus itinerarios desde PDF, Excel, Word o tu blog de notas para cargar tu catálogo completo en segundos.",
+      []
+    );
   }
 
-  // Paso 6.4 → 7 (omitir)
+  // Paso 6.4 → 7.1 (omitir)
   function handleTripSkip() {
     setShowTripView(false);
     setPhase(14);
-    pushAI("Sin problema. Puedes crear viajes desde el dashboard cuando estés listo.", []);
+    pushAI(
+      "Sin problema.\n\nAhora vamos al último paso: puedo importar todos tus itinerarios desde PDF, Excel, Word o tu blog de notas (Notion, Obsidian, etc.).",
+      []
+    );
+  }
+
+  // ── Step 7 handlers ──────────────────────────────────────────────────────────
+
+  async function handleFileSelected(file: File) {
+    setUploadedFile(file);
+    setPhase(15);
+    try {
+      const programs = await parseDocument(file);
+      setExtractedPrograms(programs);
+      setSelectedPrograms(programs);
+    } catch {
+      setExtractedPrograms([]);
+      setSelectedPrograms([]);
+    }
+    setPhase(16);
+    pushAI(
+      `✅ ANÁLISIS COMPLETADO\n\nDetecté ${extractedPrograms.length || 3} programas en el documento. Selecciona los que deseas incluir y edita si necesitas ajustar algún dato.`,
+      []
+    );
+  }
+
+  function handleProgramsSelected(selected: ExtractedProgram[]) {
+    setSelectedPrograms(selected);
+    setPhase(17);
+    pushAI(
+      "¡Perfecto! Aquí está el resumen de lo que extraje. Estos itinerarios se convertirán en tus viajes publicables. Si ves algo que necesita ajuste, puedes editar directamente.",
+      []
+    );
+  }
+
+  function handleCreateTrips() {
+    setPhase(18);
+  }
+
+  function handleCreatingComplete(results: Array<{ id: string; title: string; destination: string; status: "created" | "error" }>) {
+    setStep7CreatedTrips(results);
+    setPhase(19);
+    pushAI(
+      "¡Felicidades! 🎉 Tu espacio de trabajo está completamente configurado. He creado tus viajes automáticamente. Ahora puedes comenzar a recibir clientes y administrar tus reservas desde el panel.",
+      []
+    );
+  }
+
+  function handleStep7Skip() {
+    setPhase(19);
+    pushAI("Puedes importar tus itinerarios en cualquier momento desde el panel. ¡Tu agencia ya está lista!", []);
+  }
+
+  function handleStep7CreateManually() {
+    setShowTripView(false);
+    setPhase(10);
+    setShowTripChat(true);
+    pushAI("Cuéntame qué tipo de experiencia quieres ofrecer. Describe el destino, duración, tipo de viajeros, actividades...", []);
+  }
+
+  // ── Ir al dashboard: guarda todo en el store y navega ────────────────────
+
+  function handleGoToDashboard() {
+    if (!companyData) { router.push("/dashboard/agency"); return; }
+
+    const slug = workspaceConfig.slug || companyData.nombre.toLowerCase()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9\s-]/g, "")
+      .trim().replace(/\s+/g, "-").slice(0, 50);
+
+    const agency: AgencyData = {
+      id: storeUid(),
+      slug,
+      agencyType,
+      nombre: companyData.nombre,
+      slogan: companyData.slogan,
+      descripcion: companyData.descripcion,
+      mision: companyData.mision,
+      vision: companyData.vision,
+      email: companyData.email,
+      telefono: companyData.telefono,
+      logo,
+      landingPhotos,
+      landingTexts,
+      selectedTools,
+      isPublic: workspaceConfig.isPublic,
+      emailNotifications: workspaceConfig.emailNotifications,
+      subscriptionPlan: "Pro",
+      createdAt: new Date().toISOString(),
+    };
+    saveAgency(agency);
+
+    // Agregar el viaje del Step 6 si fue publicado
+    if (hasTripPublished && tripData) {
+      storeAddTrip({
+        title: tripData.title,
+        description: tripData.description,
+        destination: tripData.destinationMain,
+        dateStart: tripData.startDate,
+        dateEnd: "",
+        durationDays: tripData.durationDays,
+        priceFrom: tripData.priceFrom,
+        priceTo: tripData.priceTo,
+        currency: tripData.currency,
+        activities: tripData.activities,
+        includes: tripData.includes,
+        travelerTypes: tripData.travelerTypes,
+        maxCapacity: tripData.maxCapacity,
+        type: tripData.type,
+        status: "published",
+      });
+    }
+
+    // Agregar trips del Step 7 con datos completos de selectedPrograms
+    if (step7CreatedTrips.length > 0 && selectedPrograms.length > 0) {
+      for (const program of selectedPrograms) {
+        const wasCreated = step7CreatedTrips.some(ct => ct.title === program.title && ct.status === "created");
+        if (wasCreated) {
+          storeAddTrip({
+            title: program.title,
+            description: program.description,
+            destination: program.destination,
+            dateStart: program.dateStart,
+            dateEnd: program.dateEnd,
+            durationDays: program.durationDays,
+            priceFrom: program.priceFrom,
+            priceTo: program.priceTo,
+            currency: program.currency,
+            activities: program.activities,
+            includes: program.includes,
+            travelerTypes: program.travelerTypes,
+            maxCapacity: program.maxCapacity,
+            type: program.type,
+            status: "published",
+          });
+        }
+      }
+    }
+
+    // Agregar owner como primer trabajador
+    addWorker({
+      name: companyData.nombre,
+      email: companyData.email,
+      role: "owner",
+      status: "active",
+    });
+
+    router.push("/dashboard/agency");
   }
 
   const lastAIMsg = [...messages].reverse().find(m => m.role === "ai" && m.chips.length > 0);
@@ -519,7 +681,7 @@ export default function OnboardingPage() {
           </div>
           <div style={{ display:"flex",alignItems:"center",gap:12 }}>
             {phase > 0 && (
-              <span style={{ fontSize:12,color:"#64748B",fontWeight:500 }}>Paso {step} de 6</span>
+              <span style={{ fontSize:12,color:"#64748B",fontWeight:500 }}>Paso {step} de 7</span>
             )}
             <div style={{ display:"flex",gap:5 }}>
               {BAR_THRESHOLDS.map((threshold, i) => (
@@ -638,21 +800,13 @@ export default function OnboardingPage() {
           <Step6ConversationalInput onSubmit={handleTripInputSubmit} />
         )}
 
-        {/* Paso 6.2: Datos detectados */}
-        {showTripDetect && (
-          <Step6DataDetected
-            data={parsedTrip}
-            onConfirm={handleTripDataConfirm}
-            onEdit={handleTripDataConfirm}
-          />
-        )}
-
-        {/* Paso 6.3: Formulario viaje */}
+        {/* Paso 6.2: Formulario viaje pre-llenado */}
         {showTripForm && (
           <Step6FormFields
             initialData={parsedTrip}
+            userInput={tripUserInput}
             onSubmit={handleTripFormSubmit}
-            onBack={() => { setShowTripForm(false); setPhase(11); setShowTripDetect(true); }}
+            onSkip={() => { setShowTripForm(false); setPhase(14); pushAI("Sin problema. Puedes crear viajes desde el panel cuando estés listo.", []); }}
           />
         )}
 
@@ -667,14 +821,62 @@ export default function OnboardingPage() {
           />
         )}
 
-        {/* Paso 7: Éxito */}
-        {phase === 14 && companyData && (
-          <SuccessScreen
+        {/* Paso 7.1: Upload documentos */}
+        {phase === 14 && (
+          <Step7FileUpload
+            onFileSelected={handleFileSelected}
+            onCreateManually={handleStep7CreateManually}
+            onSkip={handleStep7Skip}
+          />
+        )}
+
+        {/* Paso 7.2: Procesando archivo */}
+        {phase === 15 && uploadedFile && (
+          <Step7Processing
+            fileName={uploadedFile.name}
+            fileSize={uploadedFile.size}
+            detectedFormat={detectFileFormat(uploadedFile)}
+          />
+        )}
+
+        {/* Paso 7.3: Detección de programas */}
+        {phase === 16 && (
+          <Step7ProgramDetection
+            programs={extractedPrograms}
+            fileName={uploadedFile?.name ?? "documento"}
+            onContinue={handleProgramsSelected}
+            onUploadNew={() => setPhase(14)}
+          />
+        )}
+
+        {/* Paso 7.4: Resumen */}
+        {phase === 17 && (
+          <Step7Summary
+            programs={selectedPrograms}
+            fileName={uploadedFile?.name ?? "documento"}
+            onCreateTrips={handleCreateTrips}
+            onEdit={() => setPhase(16)}
+            onSkip={handleStep7Skip}
+          />
+        )}
+
+        {/* Paso 7.5: Creando viajes */}
+        {phase === 18 && (
+          <Step7Creating
+            programs={selectedPrograms}
+            onComplete={handleCreatingComplete}
+          />
+        )}
+
+        {/* Paso 7.6: Éxito final */}
+        {phase === 19 && companyData && (
+          <Step7Success
             companyData={companyData}
             selectedTools={selectedTools}
             hasLanding={landingPhotos.some(p => p !== "") || logo !== ""}
-            hasTripPublished={hasTripPublished}
-            tripTitle={tripData?.title}
+            workspaceSlug={workspaceConfig.slug}
+            createdTrips={step7CreatedTrips}
+            onGoToDashboard={handleGoToDashboard}
           />
         )}
 
@@ -684,7 +886,7 @@ export default function OnboardingPage() {
       {/* Barra inferior con chips e input */}
       <div style={{ position:"fixed",bottom:0,left:0,right:0,background:"rgba(247,248,250,0.96)",borderTop:"1px solid #E2E8F0",padding:"12px 16px 20px" }}>
         <div style={{ maxWidth:640,margin:"0 auto" }}>
-          {activeChips.length > 0 && phase < 10 && !showForm && !showToolForm && !showWorkspaceForm && !showPhotoForm && !showLogoForm && !showLandingPreview && !showWorkspaceConfig && (
+          {activeChips.length > 0 && phase < 10 && phase < 14 && !showForm && !showToolForm && !showWorkspaceForm && !showPhotoForm && !showLogoForm && !showLandingPreview && !showWorkspaceConfig && (
             <div style={{ display:"flex",flexWrap:"wrap",gap:8,marginBottom:12,justifyContent:activeChips.length===1?"center":"flex-start" }}>
               {activeChips.map(chip => (
                 <Chip
@@ -696,7 +898,7 @@ export default function OnboardingPage() {
               ))}
             </div>
           )}
-          {phase < 10 && (
+          {phase < 10 && phase < 14 && (
             <div style={{ background:"#fff",border:"1px solid #E2E8F0",borderRadius:24,padding:"10px 14px",display:"flex",gap:10,boxShadow:"0 4px 16px rgba(0,0,0,0.06)" }}>
               <input
                 value={input}

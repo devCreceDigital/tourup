@@ -18,11 +18,12 @@ const section: React.CSSProperties = { fontSize:13,fontWeight:700,color:"#64748B
 
 interface Step6FormFieldsProps {
   initialData: ParsedTripData;
+  userInput?: string;
   onSubmit: (data: TripData) => void;
-  onBack: () => void;
+  onSkip: () => void;
 }
 
-export function Step6FormFields({ initialData, onSubmit, onBack }: Step6FormFieldsProps) {
+export function Step6FormFields({ initialData, userInput, onSubmit, onSkip }: Step6FormFieldsProps) {
   const [data, setData] = useState<TripData>({
     ...EMPTY_TRIP,
     destinationMain: initialData.destinationMain ?? "",
@@ -33,6 +34,7 @@ export function Step6FormFields({ initialData, onSubmit, onBack }: Step6FormFiel
     currency: initialData.currency ?? "USD",
     activities: initialData.activities ?? [],
     startDate: initialData.startDate ?? "",
+    description: userInput ? userInput.slice(0, 200) : "",
   });
   const [errors, setErrors] = useState<TripErrors>({});
   const [submitted, setSubmitted] = useState(false);
@@ -76,7 +78,7 @@ export function Step6FormFields({ initialData, onSubmit, onBack }: Step6FormFiel
   return (
     <div style={{ maxWidth:640,margin:"0 auto",padding:"20px" }}>
       <h2 style={{ fontSize:18,fontWeight:600,color:"#0A2540",marginBottom:6 }}>Detalles del viaje</h2>
-      <p style={{ fontSize:13,color:"#64748B",marginBottom:24 }}>Completa la información para que tus clientes encuentren tu viaje.</p>
+      <p style={{ fontSize:13,color:"#64748B",marginBottom:24 }}>Aquí está lo que capturé de tu descripción. Completa los campos que falten.</p>
 
       {/* Sección 1: Información básica */}
       <div style={card}>
@@ -232,12 +234,12 @@ export function Step6FormFields({ initialData, onSubmit, onBack }: Step6FormFiel
         </div>
       </div>
 
-      <div style={{ display:"flex",gap:10,marginTop:4 }}>
-        <button onClick={handleSubmit} style={{ flex:1,background:"#3B82F6",color:"#fff",border:"none",borderRadius:10,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(59,130,246,0.3)" }}>
+      <div style={{ display:"flex",flexDirection:"column",gap:10,marginTop:4 }}>
+        <button onClick={handleSubmit} style={{ width:"100%",background:"#3B82F6",color:"#fff",border:"none",borderRadius:10,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(59,130,246,0.3)" }}>
           Confirmar detalles →
         </button>
-        <button onClick={onBack} style={{ flex:"0 0 auto",background:"#fff",color:"#0A2540",border:"1px solid #E2E8F0",borderRadius:10,padding:"15px 18px",fontSize:14,cursor:"pointer",fontWeight:500 }}>
-          ← Volver
+        <button onClick={onSkip} style={{ background:"none",border:"none",color:"#94A3B8",fontSize:13,cursor:"pointer",textDecoration:"underline",padding:"4px" }}>
+          Omitir por ahora (completar desde el panel)
         </button>
       </div>
     </div>

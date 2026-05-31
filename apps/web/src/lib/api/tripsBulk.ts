@@ -1,4 +1,4 @@
-import type { ExtractedProgram } from "@/lib/onboarding/parseDocument";
+import type { ExtractedProgram } from "@/lib/documents/types";
 
 export async function createTripsBulk(programs: ExtractedProgram[]) {
   const res = await fetch("/api/onboarding/create-trips-bulk", {

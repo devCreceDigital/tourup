@@ -55,8 +55,8 @@ export function parseUserInput(input: string): ParsedTripData {
   // Duration
   const durMatch = input.match(/(\d+)\s*(días?|semanas?|meses?|noches?)/i);
   if (durMatch) {
-    const num = parseInt(durMatch[1]);
-    const unit = durMatch[2].toLowerCase();
+    const num = parseInt(durMatch[1] ?? "0");
+    const unit = (durMatch[2] ?? "").toLowerCase();
     if (unit.startsWith("semana")) result.durationDays = num * 7;
     else if (unit.startsWith("mes")) result.durationDays = num * 30;
     else result.durationDays = num;
@@ -72,7 +72,7 @@ export function parseUserInput(input: string): ParsedTripData {
   // Capacity
   const capMatch = input.match(/(?:para|con|somos|grupo de|grupos? de)\s+(\d+)/i);
   if (capMatch) {
-    result.maxCapacity = parseInt(capMatch[1]);
+    result.maxCapacity = parseInt(capMatch[1] ?? "0");
   } else if (result.travelerTypes?.includes("Parejas") && !result.maxCapacity) {
     result.maxCapacity = 2;
   }
@@ -87,7 +87,7 @@ export function parseUserInput(input: string): ParsedTripData {
   // Price
   const priceMatch = input.match(/\$\s*(\d[\d,.]*)|(\d[\d,.]*)\s*(?:dólares?|USD|EUR)/i);
   if (priceMatch) {
-    const raw = (priceMatch[1] ?? priceMatch[2]).replace(/[,.]/g, "");
+    const raw = (priceMatch[1] ?? priceMatch[2] ?? "0").replace(/[,.]/g, "");
     result.priceFrom = parseInt(raw);
     result.currency = /EUR/i.test(input) ? "EUR" : "USD";
   }

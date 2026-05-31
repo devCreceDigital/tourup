@@ -69,11 +69,11 @@ export function Step6DataDetected({ data, onConfirm, onEdit }: Step6DataDetected
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
               <div>
                 <label style={{ display:"block",fontSize:12,fontWeight:600,color:"#64748B",marginBottom:6 }}>📅 Duración (días)</label>
-                <input type="number" min="1" max="365" value={draft.durationDays ?? ""} onChange={e => setDraft(p => ({...p,durationDays:parseInt(e.target.value)||undefined}))} style={{ width:"100%",border:"1px solid #E2E8F0",borderRadius:8,padding:"9px 12px",fontSize:13,color:"#0A2540",boxSizing:"border-box" }} />
+                <input type="number" min="1" max="365" value={draft.durationDays ?? ""} onChange={e => { const v = parseInt(e.target.value); setDraft(p => ({...p, durationDays: v > 0 ? v : undefined} as typeof p)); }} style={{ width:"100%",border:"1px solid #E2E8F0",borderRadius:8,padding:"9px 12px",fontSize:13,color:"#0A2540",boxSizing:"border-box" }} />
               </div>
               <div>
                 <label style={{ display:"block",fontSize:12,fontWeight:600,color:"#64748B",marginBottom:6 }}>🧑‍🤝‍🧑 Cantidad viajeros</label>
-                <input type="number" min="1" value={draft.maxCapacity ?? ""} onChange={e => setDraft(p => ({...p,maxCapacity:parseInt(e.target.value)||undefined}))} style={{ width:"100%",border:"1px solid #E2E8F0",borderRadius:8,padding:"9px 12px",fontSize:13,color:"#0A2540",boxSizing:"border-box" }} />
+                <input type="number" min="1" value={draft.maxCapacity ?? ""} onChange={e => { const v = parseInt(e.target.value); setDraft(p => ({...p, maxCapacity: v > 0 ? v : undefined} as typeof p)); }} style={{ width:"100%",border:"1px solid #E2E8F0",borderRadius:8,padding:"9px 12px",fontSize:13,color:"#0A2540",boxSizing:"border-box" }} />
               </div>
             </div>
             <div>
@@ -107,7 +107,7 @@ export function Step6DataDetected({ data, onConfirm, onEdit }: Step6DataDetected
           <select value={draft.currency ?? "USD"} onChange={e => setDraft(p => ({...p,currency:e.target.value}))} style={{ border:"1px solid #E2E8F0",borderRadius:6,padding:"7px 10px",fontSize:13,color:"#0A2540",background:"#fff",cursor:"pointer" }}>
             {["USD","EUR","COP","MXN","ARS","PEN"].map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          <input type="number" min="0" value={draft.priceFrom ?? ""} onChange={e => setDraft(p => ({...p,priceFrom:parseFloat(e.target.value)||undefined}))} placeholder="Presupuesto por persona" style={{ flex:1,border:"1px solid #E2E8F0",borderRadius:6,padding:"7px 10px",fontSize:13,color:"#0A2540" }} />
+          <input type="number" min="0" value={draft.priceFrom ?? ""} onChange={e => { const v = parseFloat(e.target.value); setDraft(p => ({...p, priceFrom: v > 0 ? v : undefined} as typeof p)); }} placeholder="Presupuesto por persona" style={{ flex:1,border:"1px solid #E2E8F0",borderRadius:6,padding:"7px 10px",fontSize:13,color:"#0A2540" }} />
           <button onClick={() => setShowBudget(false)} style={{ background:"none",border:"none",cursor:"pointer",color:"#94A3B8",padding:4 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
